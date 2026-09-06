@@ -1,0 +1,20 @@
+Tabela de operadores aéreos (airlines.json)
+===========================================
+
+Fonte: OpenFlights Airline Database
+       https://openflights.org/data.html
+       https://github.com/jpatokal/openflights (data/airlines.dat)
+
+Licença: Open Database License (ODbL) v1.0
+         https://opendatacommons.org/licenses/odbl/1-0/
+
+A base de dados de companhias aéreas do OpenFlights é disponibilizada sob a Open Database
+License. Os conteúdos individuais da base de dados estão licenciados sob a Database Contents
+License: https://opendatacommons.org/licenses/dbcl/1-0/
+
+A ODbL exige que esta atribuição acompanhe qualquer redistribuição da tabela, incluindo a
+distribuição dentro desta aplicação. Este ficheiro viaja no APK por essa razão: não o remover.
+
+O ficheiro airlines.json é uma obra derivada — apenas os registos com designador ICAO de 3 letras,
+convertidos para um mapa de designador -> nome. A conversão é feita por
+tools/airlines/build_airlines_json.py e é reproduzível a partir da fonte acima.

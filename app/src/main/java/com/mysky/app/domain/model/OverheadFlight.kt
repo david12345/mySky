@@ -13,6 +13,14 @@ data class OverheadFlight(
     val bearingDegrees: Double,
     /** Elevação acima do horizonte, em graus (0 = horizonte, 90 = zénite). */
     val elevationDegrees: Double,
+    /**
+     * Operador aéreo, quando o indicativo o identifica.
+     *
+     * Preenchido por [com.mysky.app.domain.usecase.ObserveSkyUseCase] num segundo passo, nunca
+     * pelo caso de uso de deteção: consultar a tabela é `suspend` e a deteção é pura e síncrona
+     * (AD-007). Por isso a omissão é `null` — um voo detetado mas ainda não enriquecido é válido.
+     */
+    val airline: Airline? = null,
 ) {
     /**
      * Critério de ordenação: quanto mais alto no céu, mais "relevante" para o utilizador

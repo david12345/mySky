@@ -29,3 +29,6 @@ Thumbs.db
 secrets.properties
 *.jks
 *.keystore
+
+# Fonte descarregada da tabela de operadores: regenerar com tools/airlines/build_airlines_json.py
+tools/airlines/airlines.dat

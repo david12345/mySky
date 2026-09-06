@@ -8,4 +8,62 @@
     <string name="permission_location_rationale">Para saber que aviões estão sobre ti, a mySky precisa da tua localização. A posição é usada apenas no teu dispositivo, para calcular a distância e o ângulo até cada avião.</string>
     <string name="permission_background_location_rationale">Para te avisar quando passa um avião mesmo por cima, mesmo com a app fechada, a mySky precisa de aceder à localização em segundo plano. Podes usar a app sem isto — só não recebes notificações com a app fechada.</string>
     <string name="permission_notifications_rationale">Ativa as notificações para seres avisado quando um avião passa sobre a tua localização.</string>
+
+    <!-- ===== Ecrã principal: lista de aviões no céu (feature 001-sky-list) ===== -->
+
+    <!-- Progresso: as duas fases têm de ser distinguíveis (FR-022). -->
+    <string name="sky_locating_user">A obter a tua localização…</string>
+    <string name="sky_loading_flights">A procurar aviões no teu céu…</string>
+
+    <!-- Céu vazio: sucesso sem resultados, nunca com aspeto de erro (FR-023). -->
+    <string name="sky_empty_title">Céu limpo</string>
+    <string name="sky_empty_body">Não há nenhum avião a passar sobre ti neste momento. A lista atualiza-se sozinha.</string>
+
+    <!-- Erros: uma mensagem distinta por causa, todas com repetição (FR-024). -->
+    <string name="sky_error_no_connection">Sem ligação à Internet. Verifica os dados móveis ou o Wi-Fi.</string>
+    <string name="sky_error_service_unavailable">O serviço de voos não respondeu. Tenta de novo dentro de momentos.</string>
+    <string name="sky_error_rate_limited">Demasiados pedidos ao serviço de voos. A app volta a tentar dentro de pouco tempo.</string>
+    <string name="sky_error_location_unavailable">Não foi possível obter a tua localização. Confirma que o GPS está ligado.</string>
+    <string name="sky_error_unexpected">Aconteceu um erro inesperado.</string>
+    <string name="sky_error_retry">Tentar de novo</string>
+
+    <!-- Resultados mantidos no ecrã quando a atualização falha (FR-025). -->
+    <string name="sky_stale_warning">Estes dados podem estar desatualizados.</string>
+
+    <!-- Permissão de localização (FR-005). O rationale reutiliza permission_location_rationale. -->
+    <string name="sky_permission_denied_title">A mySky precisa da tua localização</string>
+    <string name="sky_permission_grant">Conceder localização</string>
+    <string name="sky_permission_permanently_denied_body">Recusaste a permissão de localização de forma permanente. Podes voltar a concedê-la nas definições do sistema.</string>
+    <string name="sky_permission_open_settings">Abrir definições</string>
+
+    <!-- Última atualização (FR-018). -->
+    <string name="sky_updated_seconds_ago">há %1$d s</string>
+    <string name="sky_updated_minutes_ago">há %1$d min</string>
+    <string name="sky_updated_just_now">agora mesmo</string>
+
+    <!-- Entrada da lista: cada grandeza com a sua unidade (FR-015). -->
+    <string name="flight_distance_km">%1$s km</string>
+    <string name="flight_altitude_meters">%1$s m</string>
+    <string name="flight_speed_kmh">%1$s km/h</string>
+    <string name="flight_elevation_degrees">%1$s°</string>
+    <!-- Acima de 85° de elevação o rumo deixa de ter significado. -->
+    <string name="flight_overhead">mesmo por cima</string>
+
+    <!-- Os 16 rumos cardinais, em português. -->
+    <string name="bearing_n">N</string>
+    <string name="bearing_nne">NNE</string>
+    <string name="bearing_ne">NE</string>
+    <string name="bearing_ene">ENE</string>
+    <string name="bearing_e">E</string>
+    <string name="bearing_ese">ESE</string>
+    <string name="bearing_se">SE</string>
+    <string name="bearing_sse">SSE</string>
+    <string name="bearing_s">S</string>
+    <string name="bearing_sso">SSO</string>
+    <string name="bearing_so">SO</string>
+    <string name="bearing_oso">OSO</string>
+    <string name="bearing_o">O</string>
+    <string name="bearing_ono">ONO</string>
+    <string name="bearing_no">NO</string>
+    <string name="bearing_nno">NNO</string>
 </resources>
