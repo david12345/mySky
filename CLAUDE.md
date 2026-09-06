@@ -93,6 +93,11 @@ pedidos concorrentes" sai da forma do laço — uma só corrotina, sequencial, s
 "em curso". Um `while` em `viewModelScope` continuaria a consumir rede em segundo plano.
 **Consequência:** o WorkManager fica reservado para widget e notificações, como em AD-003. Cada
 ciclo pede uma posição pontual em vez de subscrever localização contínua.
+**Correção durante a implementação:** o pedido manual chega por um `Channel(CONFLATED)` e não pelo
+`MutableSharedFlow` previsto. Um `SharedFlow` sem replay descarta o que é emitido enquanto não há
+coletor, e entre duas iterações do laço existe esse instante — um toque em "atualizar" que caísse
+lá perdia-se em silêncio. O canal conflado guarda o último toque sem nunca enfileirar dois, e a
+iteração seguinte é sequencial, por isso FR-020 mantém-se.
 
 ### AD-009 — `ObserveSkyUseCase` recebe critérios por parâmetro; o tempo entra por abstração
 Deixa de depender do `SettingsRepository` e passa a aceitar `criteria: OverheadCriteria =

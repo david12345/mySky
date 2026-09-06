@@ -2,10 +2,13 @@ package com.mysky.app.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.mysky.app.presentation.detail.FlightDetailScreen
+import com.mysky.app.presentation.detail.FlightDetailViewModel
 import com.mysky.app.presentation.main.MainScreen
 import com.mysky.app.presentation.settings.SettingsScreen
 
@@ -27,7 +30,14 @@ fun MySkyNavHost(navController: NavHostController = rememberNavController()) {
                 onSettingsClick = { navController.navigate(MySkyRoutes.SETTINGS) },
             )
         }
-        composable(MySkyRoutes.FLIGHT_DETAIL) { FlightDetailScreen(onBack = navController::popBackStack) }
+        composable(
+            route = MySkyRoutes.FLIGHT_DETAIL,
+            // Argumento declarado e tipado: é o que garante que o `icao24` chega ao
+            // `SavedStateHandle` do ViewModel do detalhe e identifica a aeronave certa (FR-028).
+            arguments = listOf(
+                navArgument(FlightDetailViewModel.ARG_ICAO24) { type = NavType.StringType },
+            ),
+        ) { FlightDetailScreen(onBack = navController::popBackStack) }
         composable(MySkyRoutes.SETTINGS) { SettingsScreen(onBack = navController::popBackStack) }
     }
 }

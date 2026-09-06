@@ -48,32 +48,38 @@ class LocationRepositoryImpl @Inject constructor(
     override suspend fun getCurrentLocation(): GeoPosition? {
         if (!hasLocationPermission()) return null
 
-        return try {
-            // `BALANCED_POWER_ACCURACY` usa rede e Wi-Fi antes do GPS: mais rápido a devolver e
-            // muito mais barato, o que é o que sustenta o arranque abaixo de 5 s (SC-001).
-            currentLocation() ?: lastLocation()
-        } catch (security: SecurityException) {
-            // A permissão pode ser revogada entre a verificação e a chamada.
-            null
-        }
+        // `BALANCED_POWER_ACCURACY` usa rede e Wi-Fi antes do GPS: mais rápido a devolver e muito
+        // mais barato, o que é o que sustenta o arranque abaixo de 5 s (SC-001).
+        return currentLocation() ?: lastLocation()
     }
 
-    private suspend fun currentLocation(): GeoPosition? {
+    /**
+     * A `SecurityException` é apanhada aqui, junto da chamada, e não à volta de [getCurrentLocation]:
+     * a permissão pode ser revogada entre a verificação e o pedido, e é este o sítio onde isso se
+     * manifesta.
+     */
+    private suspend fun currentLocation(): GeoPosition? = try {
         val cancellation = CancellationTokenSource()
-        return suspendCancellableCoroutine { continuation ->
+        suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { cancellation.cancel() }
             fusedLocationClient
                 .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellation.token)
                 .addOnSuccessListener { continuation.resume(it?.toGeoPosition()) }
                 .addOnFailureListener { continuation.resume(null) }
         }
+    } catch (security: SecurityException) {
+        null
     }
 
     /** Recurso para quando não há fix novo a tempo: uma posição antiga é melhor do que nenhuma. */
-    private suspend fun lastLocation(): GeoPosition? = suspendCancellableCoroutine { continuation ->
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { continuation.resume(it?.toGeoPosition()) }
-            .addOnFailureListener { continuation.resume(null) }
+    private suspend fun lastLocation(): GeoPosition? = try {
+        suspendCancellableCoroutine { continuation ->
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { continuation.resume(it?.toGeoPosition()) }
+                .addOnFailureListener { continuation.resume(null) }
+        }
+    } catch (security: SecurityException) {
+        null
     }
 
     override fun locationUpdates(): Flow<GeoPosition> =

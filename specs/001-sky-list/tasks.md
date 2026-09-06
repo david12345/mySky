@@ -96,19 +96,19 @@ coerente com o céu real. Entrega valor sem qualquer outra história implementad
 
 ### Tests for User Story 1
 
-- [ ] T027 [P] [US1] Testes de formatação em `app/src/test/java/com/mysky/app/presentation/main/FlightFormattingTest.kt`: distância com uma casa decimal, altitude e velocidade inteiras, conversão m/s → km/h, os 16 rumos cardinais, e elevação ≥ 85° a produzir "mesmo por cima" em vez de rumo
-- [ ] T028 [P] [US1] Testes de carga inicial do ViewModel em `app/src/test/java/com/mysky/app/presentation/main/MainViewModelTest.kt` com `runTest` e Turbine: fase passa por `LocatingUser` e `LoadingFlights` antes de `Idle`, sucesso preenche `flights` e `lastUpdatedEpochSeconds`, e a lista chega ordenada por elevação
+- [X] T027 [P] [US1] Testes de formatação em `app/src/test/java/com/mysky/app/presentation/main/FlightFormattingTest.kt`: distância com uma casa decimal, altitude e velocidade inteiras, conversão m/s → km/h, os 16 rumos cardinais, e elevação ≥ 85° a produzir "mesmo por cima" em vez de rumo
+- [X] T028 [P] [US1] Testes de carga inicial do ViewModel em `app/src/test/java/com/mysky/app/presentation/main/MainViewModelTest.kt` com `runTest` e Turbine: fase passa por `LocatingUser` e `LoadingFlights` antes de `Idle`, sucesso preenche `flights` e `lastUpdatedEpochSeconds`, e a lista chega ordenada por elevação
 
-- [ ] T029 [P] [US1] Teste de mudança de configuração em `app/src/test/java/com/mysky/app/presentation/main/MainViewModelConfigChangeTest.kt`: uma nova subscrição dentro da janela de 5 s reaproveita o estado (`flights`, `lastUpdatedEpochSeconds`, `lastError` preservados) e **não** dispara pedido novo — invariante 9 de [contracts/main-screen-ui.md](./contracts/main-screen-ui.md) (FR-026)
+- [X] T029 [P] [US1] Teste de mudança de configuração em `app/src/test/java/com/mysky/app/presentation/main/MainViewModelConfigChangeTest.kt`: uma nova subscrição dentro da janela de 5 s reaproveita o estado (`flights`, `lastUpdatedEpochSeconds`, `lastError` preservados) e **não** dispara pedido novo — invariante 9 de [contracts/main-screen-ui.md](./contracts/main-screen-ui.md) (FR-026)
 
 ### Implementation for User Story 1
 
-- [ ] T030 [P] [US1] Reescrever `MainUiState` em `app/src/main/java/com/mysky/app/presentation/main/MainUiState.kt` com `permission`, `phase`, `flights`, `lastUpdatedEpochSeconds` e `lastError`, mais os estados derivados (céu vazio, dados desatualizados, primeira carga) definidos em [contracts/main-screen-ui.md](./contracts/main-screen-ui.md)
-- [ ] T031 [P] [US1] Criar as funções de formatação em `app/src/main/java/com/mysky/app/presentation/main/format/FlightFormatting.kt` (distância, altitude, velocidade, elevação, rumo em 16 pontos, tempo relativo), cada grandeza com a sua unidade e fixando km/m/km-h nesta feature (FR-010, FR-015) (faz T027 passar)
-- [ ] T032 [US1] Implementar em `app/src/main/java/com/mysky/app/presentation/main/MainViewModel.kt` a carga única, só depois de a permissão estar concedida (FR-002): obter posição via `LocationRepository` — uma posição `null` com a permissão concedida traduz-se em `lastError = SkyError.LocationUnavailable` e **não** chega a chamar o caso de uso (FR-024; é o único sítio onde esta variante nasce, porque o repositório de localização devolve `null` em vez de falhar) —, chamar `ObserveSkyUseCase` com `OverheadCriteria()` e emitir o estado. Remover do construtor a dependência de `SettingsRepository` (AD-009). Expor `uiState` com `stateIn(viewModelScope, WhileSubscribed(5_000), MainUiState())` conforme AD-008 (depende de T030; faz T028 passar)
-- [ ] T033 [P] [US1] Criar o pedido de permissão com rationale prévio em `app/src/main/java/com/mysky/app/presentation/permission/LocationPermission.kt`, usando `accompanist-permissions` e a string `permission_location_rationale`; o rationale aparece **antes** do diálogo do sistema (FR-001) e pede apenas localização aproximada (FR-003)
-- [ ] T034 [P] [US1] Criar a entrada da lista em `app/src/main/java/com/mysky/app/presentation/main/FlightRow.kt`, com omissão discreta dos campos ausentes e, quando não há indicativo, identificação pelo `icao24` em maiúsculas — a única exceção à regra de omissão (FR-013, FR-014) (depende de T031)
-- [ ] T035 [US1] Implementar o corpo do ecrã em `app/src/main/java/com/mysky/app/presentation/main/MainScreen.kt`: `LazyColumn` de `FlightRow` com **`key` estável = `aircraft.icao24`** — sem ela, a aeronave que sai do céu entre duas atualizações reordena a lista com salto visual e um toque pode cair na entrada errada (edge case da [spec.md](./spec.md)) —, indicador de progresso com texto distinto para `LocatingUser` e `LoadingFlights` (FR-022), e ligação ao fluxo de permissão (depende de T032, T033, T034)
+- [X] T030 [P] [US1] Reescrever `MainUiState` em `app/src/main/java/com/mysky/app/presentation/main/MainUiState.kt` com `permission`, `phase`, `flights`, `lastUpdatedEpochSeconds` e `lastError`, mais os estados derivados (céu vazio, dados desatualizados, primeira carga) definidos em [contracts/main-screen-ui.md](./contracts/main-screen-ui.md)
+- [X] T031 [P] [US1] Criar as funções de formatação em `app/src/main/java/com/mysky/app/presentation/main/format/FlightFormatting.kt` (distância, altitude, velocidade, elevação, rumo em 16 pontos, tempo relativo), cada grandeza com a sua unidade e fixando km/m/km-h nesta feature (FR-010, FR-015) (faz T027 passar)
+- [X] T032 [US1] Implementar em `app/src/main/java/com/mysky/app/presentation/main/MainViewModel.kt` a carga única, só depois de a permissão estar concedida (FR-002): obter posição via `LocationRepository` — uma posição `null` com a permissão concedida traduz-se em `lastError = SkyError.LocationUnavailable` e **não** chega a chamar o caso de uso (FR-024; é o único sítio onde esta variante nasce, porque o repositório de localização devolve `null` em vez de falhar) —, chamar `ObserveSkyUseCase` com `OverheadCriteria()` e emitir o estado. Remover do construtor a dependência de `SettingsRepository` (AD-009). Expor `uiState` com `stateIn(viewModelScope, WhileSubscribed(5_000), MainUiState())` conforme AD-008 (depende de T030; faz T028 passar)
+- [X] T033 [P] [US1] Criar o pedido de permissão com rationale prévio em `app/src/main/java/com/mysky/app/presentation/permission/LocationPermission.kt`, usando `accompanist-permissions` e a string `permission_location_rationale`; o rationale aparece **antes** do diálogo do sistema (FR-001) e pede apenas localização aproximada (FR-003)
+- [X] T034 [P] [US1] Criar a entrada da lista em `app/src/main/java/com/mysky/app/presentation/main/FlightRow.kt`, com omissão discreta dos campos ausentes e, quando não há indicativo, identificação pelo `icao24` em maiúsculas — a única exceção à regra de omissão (FR-013, FR-014) (depende de T031)
+- [X] T035 [US1] Implementar o corpo do ecrã em `app/src/main/java/com/mysky/app/presentation/main/MainScreen.kt`: `LazyColumn` de `FlightRow` com **`key` estável = `aircraft.icao24`** — sem ela, a aeronave que sai do céu entre duas atualizações reordena a lista com salto visual e um toque pode cair na entrada errada (edge case da [spec.md](./spec.md)) —, indicador de progresso com texto distinto para `LocatingUser` e `LoadingFlights` (FR-022), e ligação ao fluxo de permissão (depende de T032, T033, T034)
 
 **Checkpoint**: US1 funcional e demonstrável de forma independente.
 
@@ -124,13 +124,13 @@ marca temporal avançar; mandar para segundo plano e confirmar no Network Inspec
 
 ### Tests for User Story 2
 
-- [ ] T036 [P] [US2] Testes do laço em tempo virtual em `app/src/test/java/com/mysky/app/presentation/main/MainViewModelRefreshLoopTest.kt`: atualiza a cada 30 s; refresh manual reinicia o relógio; refresh manual durante um automático não gera pedido concorrente (FR-020); sem subscritores o laço para em 5 s e não há mais chamadas ao `LocationRepository` nem ao `FlightRepository` (FR-019)
+- [X] T036 [P] [US2] Testes do laço em tempo virtual em `app/src/test/java/com/mysky/app/presentation/main/MainViewModelRefreshLoopTest.kt`: atualiza a cada 30 s; refresh manual reinicia o relógio; refresh manual durante um automático não gera pedido concorrente (FR-020); sem subscritores o laço para em 5 s e não há mais chamadas ao `LocationRepository` nem ao `FlightRepository` (FR-019)
 
 ### Implementation for User Story 2
 
-- [ ] T037 [US2] Converter a carga única num laço sequencial em `app/src/main/java/com/mysky/app/presentation/main/MainViewModel.kt`: cada iteração atualiza e depois espera pelo tick de 30 s (FR-016) **ou** por um pedido manual vindo de um `MutableSharedFlow` com `DROP_OLDEST`, o que vier primeiro (AD-008) (depende de T032; faz T036 passar)
-- [ ] T038 [P] [US2] Acrescentar a formatação de tempo relativo ("há 12 s", "há 2 min") em `app/src/main/java/com/mysky/app/presentation/main/format/FlightFormatting.kt` (depende de T031)
-- [ ] T039 [US2] Acrescentar puxar-para-atualizar e a marca temporal de última atualização em `app/src/main/java/com/mysky/app/presentation/main/MainScreen.kt` (FR-017, FR-018), ligando o gesto a `onManualRefresh` (depende de T035, T037, T038)
+- [X] T037 [US2] Converter a carga única num laço sequencial em `app/src/main/java/com/mysky/app/presentation/main/MainViewModel.kt`: cada iteração atualiza e depois espera pelo tick de 30 s (FR-016) **ou** por um pedido manual vindo de um `MutableSharedFlow` com `DROP_OLDEST`, o que vier primeiro (AD-008) (depende de T032; faz T036 passar)
+- [X] T038 [P] [US2] Acrescentar a formatação de tempo relativo ("há 12 s", "há 2 min") em `app/src/main/java/com/mysky/app/presentation/main/format/FlightFormatting.kt` (depende de T031)
+- [X] T039 [US2] Acrescentar puxar-para-atualizar e a marca temporal de última atualização em `app/src/main/java/com/mysky/app/presentation/main/MainScreen.kt` (FR-017, FR-018), ligando o gesto a `onManualRefresh` (depende de T035, T037, T038)
 
 **Checkpoint**: US1 e US2 funcionam de forma independente.
 
@@ -147,15 +147,15 @@ confirmar seis ecrãs distintos, cada um com a sua ação seguinte.
 
 ### Tests for User Story 3
 
-- [ ] T040 [P] [US3] Testes do mapeamento erro → mensagem em `app/src/test/java/com/mysky/app/presentation/main/SkyErrorMessagesTest.kt`: cada variante de `SkyError` produz uma string distinta e todas oferecem repetição (FR-024)
-- [ ] T041 [P] [US3] Testes dos estados em `app/src/test/java/com/mysky/app/presentation/main/MainViewModelStatesTest.kt`: falha não limpa `flights` nem `lastUpdatedEpochSeconds` (FR-025); sucesso limpa `lastError`; posição `null` com a permissão concedida produz `SkyError.LocationUnavailable`, distinta de `NoConnection` (FR-024); `RateLimited(retryAfter)` alonga a espera seguinte para `max(30 s, retryAfter)` sem reintentar de imediato (FR-021); permissão revogada com o ecrã aberto passa a `Denied` ao voltar (FR-006); `phase` nunca fica preso em `LoadingFlights`
+- [X] T040 [P] [US3] Testes do mapeamento erro → mensagem em `app/src/test/java/com/mysky/app/presentation/main/SkyErrorMessagesTest.kt`: cada variante de `SkyError` produz uma string distinta e todas oferecem repetição (FR-024)
+- [X] T041 [P] [US3] Testes dos estados em `app/src/test/java/com/mysky/app/presentation/main/MainViewModelStatesTest.kt`: falha não limpa `flights` nem `lastUpdatedEpochSeconds` (FR-025); sucesso limpa `lastError`; posição `null` com a permissão concedida produz `SkyError.LocationUnavailable`, distinta de `NoConnection` (FR-024); `RateLimited(retryAfter)` alonga a espera seguinte para `max(30 s, retryAfter)` sem reintentar de imediato (FR-021); permissão revogada com o ecrã aberto passa a `Denied` ao voltar (FR-006); `phase` nunca fica preso em `LoadingFlights`
 
 ### Implementation for User Story 3
 
-- [ ] T042 [P] [US3] Criar o mapeamento de `SkyError` para recurso de string em `app/src/main/java/com/mysky/app/presentation/main/SkyErrorMessages.kt` (faz T040 passar)
-- [ ] T043 [US3] Tratar no `MainViewModel` a reavaliação da permissão em `onScreenVisible`, os estados `Denied`/`PermanentlyDenied`, e o alongamento da espera em `RateLimited`, em `app/src/main/java/com/mysky/app/presentation/main/MainViewModel.kt` (depende de T037; faz T041 passar)
-- [ ] T044 [US3] Implementar a renderização dos estados em `app/src/main/java/com/mysky/app/presentation/main/MainScreen.kt`, seguindo exatamente a tabela de precedência de [contracts/main-screen-ui.md](./contracts/main-screen-ui.md), incluindo o céu vazio sem aspeto de erro (FR-023) — a permissão ganha a tudo, e ter resultados antigos ganha ao erro (depende de T039, T042, T043)
-- [ ] T045 [US3] Acrescentar o encaminhamento para as definições do sistema no caso de recusa permanente, em `app/src/main/java/com/mysky/app/presentation/permission/LocationPermission.kt` (FR-005) (depende de T033)
+- [X] T042 [P] [US3] Criar o mapeamento de `SkyError` para recurso de string em `app/src/main/java/com/mysky/app/presentation/main/SkyErrorMessages.kt` (faz T040 passar)
+- [X] T043 [US3] Tratar no `MainViewModel` a reavaliação da permissão em `onScreenVisible`, os estados `Denied`/`PermanentlyDenied`, e o alongamento da espera em `RateLimited`, em `app/src/main/java/com/mysky/app/presentation/main/MainViewModel.kt` (depende de T037; faz T041 passar)
+- [X] T044 [US3] Implementar a renderização dos estados em `app/src/main/java/com/mysky/app/presentation/main/MainScreen.kt`, seguindo exatamente a tabela de precedência de [contracts/main-screen-ui.md](./contracts/main-screen-ui.md), incluindo o céu vazio sem aspeto de erro (FR-023) — a permissão ganha a tudo, e ter resultados antigos ganha ao erro (depende de T039, T042, T043)
+- [X] T045 [US3] Acrescentar o encaminhamento para as definições do sistema no caso de recusa permanente, em `app/src/main/java/com/mysky/app/presentation/permission/LocationPermission.kt` (FR-005) (depende de T033)
 
 **Checkpoint**: as três histórias funcionam de forma independente.
 
@@ -170,12 +170,12 @@ voltar atrás regressa à lista.
 
 ### Tests for User Story 4
 
-- [ ] T046 [P] [US4] Teste de que o argumento de rota chega ao destino em `app/src/test/java/com/mysky/app/presentation/detail/FlightDetailViewModelTest.kt`, usando um `SavedStateHandle` com `icao24`
+- [X] T046 [P] [US4] Teste de que o argumento de rota chega ao destino em `app/src/test/java/com/mysky/app/presentation/detail/FlightDetailViewModelTest.kt`, usando um `SavedStateHandle` com `icao24`
 
 ### Implementation for User Story 4
 
-- [ ] T047 [US4] Declarar o argumento tipado `icao24` na rota de detalhe (FR-028) em `app/src/main/java/com/mysky/app/presentation/navigation/MySkyNavHost.kt` (faz T046 passar)
-- [ ] T048 [US4] Ligar o toque na entrada a `onFlightClick(icao24)` (FR-027) em `app/src/main/java/com/mysky/app/presentation/main/FlightRow.kt` e `MainScreen.kt` (depende de T034, T035, T047)
+- [X] T047 [US4] Declarar o argumento tipado `icao24` na rota de detalhe (FR-028) em `app/src/main/java/com/mysky/app/presentation/navigation/MySkyNavHost.kt` (faz T046 passar)
+- [X] T048 [US4] Ligar o toque na entrada a `onFlightClick(icao24)` (FR-027) em `app/src/main/java/com/mysky/app/presentation/main/FlightRow.kt` e `MainScreen.kt` (depende de T034, T035, T047)
 
 **Checkpoint**: todas as histórias completas.
 
@@ -183,10 +183,10 @@ voltar atrás regressa à lista.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T049 [P] Limpar os marcadores `TODO(feature/sky-list)` que ficaram resolvidos em todos os ficheiros tocados, e confirmar que nenhum sobra fora do âmbito de features futuras
-- [ ] T050 [P] Verificar que nenhum ficheiro em `app/src/main/java/com/mysky/app/domain/` importa `android.*`, Retrofit, Room, Compose ou WorkManager (princípio I): `grep -rE "^import (android|retrofit2|androidx\.room|androidx\.compose|androidx\.work)" app/src/main/java/com/mysky/app/domain/`
-- [ ] T051 [P] Verificar que a feature nunca pede `ACCESS_BACKGROUND_LOCATION` em runtime (FR-004, princípio III): `grep -rn "ACCESS_BACKGROUND_LOCATION" app/src/main/java/` tem de não devolver nada — a permissão continua declarada no manifesto para features futuras, mas declarar não é pedir
-- [ ] T052 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes (cobre SC-003, SC-006 e SC-007 na parte automatizada)
+- [X] T049 [P] Limpar os marcadores `TODO(feature/sky-list)` que ficaram resolvidos em todos os ficheiros tocados, e confirmar que nenhum sobra fora do âmbito de features futuras
+- [X] T050 [P] Verificar que nenhum ficheiro em `app/src/main/java/com/mysky/app/domain/` importa `android.*`, Retrofit, Room, Compose ou WorkManager (princípio I): `grep -rE "^import (android|retrofit2|androidx\.room|androidx\.compose|androidx\.work)" app/src/main/java/com/mysky/app/domain/`
+- [X] T051 [P] Verificar que a feature nunca pede `ACCESS_BACKGROUND_LOCATION` em runtime (FR-004, princípio III): `grep -rn "ACCESS_BACKGROUND_LOCATION" app/src/main/java/` tem de não devolver nada — a permissão continua declarada no manifesto para features futuras, mas declarar não é pedir
+- [X] T052 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes (cobre SC-003, SC-006 e SC-007 na parte automatizada)
 - [ ] T053 Executar a validação manual de [quickstart.md](./quickstart.md) secções 4 a 6 e preencher os critérios de saída: os seis estados (SC-005), tempo até à primeira lista abaixo de 5 s (SC-001), cobertura da tabela de operadores em 100 entradas reais (SC-004), ausência de rede em segundo plano (SC-007), e a verificação contra o céu real (SC-002, SC-003)
 - [ ] T054 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (exigência da constituição, princípio VI)
 - [ ] T055 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
