@@ -68,6 +68,54 @@ duas flags legacy que desaparecem no AGP 10. O Hilt >= 2.59 exige AGP 9, por iss
 hoje é AGP 8.13.2 com Hilt 2.58.
 **Rever quando:** o KSP anunciar suporte ao Kotlin embutido do AGP. Aí sobe-se AGP e Hilt juntos.
 
+### AD-007 — A tabela de operadores é uma porta própria, não uma fonte de voos
+O nome da companhia é resolvido localmente a partir do prefixo de 3 letras do indicativo, via
+`domain/repository/AirlineDirectory` implementado por `data/local/AssetAirlineDirectory` sobre um
+JSON em `assets/`. O enriquecimento acontece em `ObserveSkyUseCase`, não em
+`DetectOverheadFlightsUseCase` (que continua puro e síncrono).
+**Porquê:** dados de referência estáticos não têm ciclo de vida nem migrações — Room seria peso
+morto. E o princípio II fala de *fontes de dados de voo*: a tabela é dado de referência, não um
+fornecedor de posições, por isso tem porta própria em vez de ser espremida no `FlightDataSource`.
+**Consequência:** `OverheadFlight` ganha `airline: Airline?`, preenchido num segundo passo. Um
+prefixo desconhecido devolve `null` — nunca esconde a aeronave.
+**Origem dos dados:** OpenFlights `airlines.dat`, sob Open Database License. A ODbL exige
+atribuição, por isso `assets/airlines-LICENSE.txt` viaja no APK ao lado da tabela e o script de
+conversão fica em `tools/airlines/` para a atualização periódica ser reproduzível. O ICAO Doc 8585
+foi descartado por ser publicação paga e não redistribuível.
+
+### AD-008 — A atualização do ecrã vive no ViewModel, não no WorkManager
+Um único laço sequencial no `MainViewModel`, exposto com
+`stateIn(viewModelScope, WhileSubscribed(5_000), ...)` e consumido com
+`collectAsStateWithLifecycle()`. Cada iteração espera pelo tick de 30 s **ou** por um pedido
+manual, o que vier primeiro.
+**Porquê:** parar quando o ecrã deixa de estar visível sai de graça do ciclo de vida, e "sem
+pedidos concorrentes" sai da forma do laço — uma só corrotina, sequencial, sem mutex nem flag de
+"em curso". Um `while` em `viewModelScope` continuaria a consumir rede em segundo plano.
+**Consequência:** o WorkManager fica reservado para widget e notificações, como em AD-003. Cada
+ciclo pede uma posição pontual em vez de subscrever localização contínua.
+
+### AD-009 — `ObserveSkyUseCase` recebe critérios por parâmetro; o tempo entra por abstração
+Deixa de depender do `SettingsRepository` e passa a aceitar `criteria: OverheadCriteria =
+OverheadCriteria()`. O relógio entra por `domain/time/TimeProvider`.
+**Porquê:** o `SettingsRepositoryImpl` é um stub que rebentaria, e implementá-lo aqui invadiria a
+feature de definições. Quando essa feature existir, é o ViewModel que alimenta o parâmetro — a
+assinatura não muda. O `TimeProvider` mantém o princípio I sem tocar em
+`DetectOverheadFlightsUseCase`, que continua a receber `nowEpochSeconds` como parâmetro puro.
+**Consequência:** a deduplicação por `icao24` entre caixas fica no `FlightRepositoryImpl` — a
+divisão em caixas é artefacto de como as fontes são interrogadas.
+
+### AD-010 — Erros são um tipo de domínio; o rate limiting é visível
+`domain/model/SkyError` (selado: `NoConnection`, `FlightServiceUnavailable`, `RateLimited`,
+`LocationUnavailable`, `Unexpected`) estende `Exception` para caber no `Result<T>` já usado nos
+contratos. A tradução acontece no `FlightRepositoryImpl`. Um 429 sobe até ao ViewModel, que alonga
+a espera seguinte para `max(intervalo, retryAfter)` e informa o utilizador.
+**Porquê:** a UI tem de distinguir três causas (FR-024) sem inspecionar tipos de rede. Reintentar
+um 429 em segredo gastaria o orçamento diário exatamente quando ele já se esgotou, e esconderia do
+utilizador a razão de a lista não atualizar.
+**Trade-off aceite:** um erro de domínio é tecnicamente lançável. Mitigado anulando
+`fillInStackTrace` e nunca o lançando — só embrulhado em `Result.failure`. Alternativa anotada: um
+tipo `SkyResult<T>` próprio, se o `Result` vier a estorvar.
+
 ## Estrutura de pastas
 
 ```
@@ -157,4 +205,10 @@ documento em caso de conflito.
 
 Esqueleto inicial. Compila, o APK de debug gera e os testes do `domain` passam.
 Implementado a sério: `GeoCalculator` e `DetectOverheadFlightsUseCase` (com testes).
-Tudo o resto são interfaces e stubs com `TODO(feature/...)`, à espera das specs.
+Tudo o resto são interfaces e stubs com `TODO(feature/...)`.
+
+**Feature em curso:** `specs/001-sky-list` — lista de aviões no céu. Especificação fechada (16/16
+no checklist), plano com artefactos de desenho completos e `tasks.md` com 55 tarefas.
+`/speckit-analyze` corrido: cobertura de 100% dos FR, sem violações constitucionais; os achados
+(fonte da tabela de operadores, leitura do asset em testes JVM, produtor de `LocationUnavailable`,
+chave estável da lista) foram corrigidos nos artefactos. Próximo passo: `/speckit-implement`.
