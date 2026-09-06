@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!--
+        Só as preferências são restauradas: o histórico de avistamentos (mysky.db) é local e
+        descartável, e um <include> explícito já exclui tudo o que não está listado.
+    -->
+    <include domain="sharedpref" path="." />
+</full-backup-content>

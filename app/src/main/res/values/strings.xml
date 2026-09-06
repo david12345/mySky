@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">mySky</string>
+    <string name="widget_label">mySky — aviões no céu</string>
+    <string name="widget_description">Mostra o avião mais visível sobre a tua localização.</string>
+
+    <!-- Rationale das permissões: mostrado ANTES do diálogo do sistema. -->
+    <string name="permission_location_rationale">Para saber que aviões estão sobre ti, a mySky precisa da tua localização. A posição é usada apenas no teu dispositivo, para calcular a distância e o ângulo até cada avião.</string>
+    <string name="permission_background_location_rationale">Para te avisar quando passa um avião mesmo por cima, mesmo com a app fechada, a mySky precisa de aceder à localização em segundo plano. Podes usar a app sem isto — só não recebes notificações com a app fechada.</string>
+    <string name="permission_notifications_rationale">Ativa as notificações para seres avisado quando um avião passa sobre a tua localização.</string>
+</resources>

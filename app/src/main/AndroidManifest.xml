@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!--
+        Localização: COARSE é suficiente para a caixa envolvente de dezenas de km; FINE melhora
+        o ângulo de elevação quando o avião está quase no zénite. Ambas pedidas em runtime, com
+        explicação antes do diálogo do sistema.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!--
+        ACCESS_BACKGROUND_LOCATION só é necessária para as notificações de "avião por cima"
+        enquanto a app não está visível. É opcional: sem ela a app funciona, apenas sem
+        notificações em background. Nunca é pedida no arranque — só a partir do ecrã de definições,
+        depois de o utilizador ativar as notificações e ver o rationale.
+        Justificação para o Google Play: a funcionalidade central é avisar o utilizador de que há
+        uma aeronave visível sobre a sua posição no momento; sem localização em background não é
+        possível avaliar essa condição quando a app está fechada.
+        TODO(feature/notifications): confirmar na fase de spec se esta permissão se mantém no MVP.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Android 13+: pedida em runtime, apenas quando o utilizador ativa as notificações. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
+
+    <application
+        android:name=".MySkyApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MySky">
+
+        <activity
+            android:name=".presentation.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MySky">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Widget Glance: o provider é o receiver, a UI vive em widget/SkyWidget.kt -->
+        <receiver
+            android:name=".widget.SkyWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sky_widget_info" />
+        </receiver>
+
+        <!--
+            Inicialização automática do WorkManager desativada: a Application implementa
+            Configuration.Provider para instalar a HiltWorkerFactory (workers com injeção).
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+    </application>
+
+</manifest>
