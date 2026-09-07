@@ -149,7 +149,7 @@ permanecem, marcados como possivelmente desatualizados, com a causa.
 - [X] T038 [P] Verificar que a `SkySession` não é injetada em `worker/` nem em `widget/` (AD-003, AD-011): `grep -rn "SkySession" app/src/main/java/com/mysky/app/worker/ app/src/main/java/com/mysky/app/widget/` tem de não devolver nada
 - [X] T039 [P] Limpar os marcadores `TODO(feature/flight-detail)` resolvidos em `presentation/detail/` e confirmar que os que sobram pertencem a features futuras
 - [X] T040 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes
-- [ ] T041 Executar a validação manual de [quickstart.md](./quickstart.md) secções 5 a 7, com atenção ao passo 7 (modo de avião **não** pode anunciar saída do céu) e à contagem de pedidos no Network Inspector (SC-008)
+- [X] T041 Executar a validação manual de [quickstart.md](./quickstart.md) secções 5 a 7, com atenção ao passo 7 (modo de avião **não** pode anunciar saída do céu) e à contagem de pedidos no Network Inspector (SC-008)
 - [X] T042 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (princípio VI)
 - [X] T043 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
 

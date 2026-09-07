@@ -285,11 +285,14 @@ Continuam por implementar, como esqueleto com `TODO(feature/...)`: `SettingsRepo
 `SightingRepository`/Room, `LocationRepositoryImpl.locationUpdates`, widget, worker e notificações.
 O ecrã de definições continua a ser um beco sem saída — é o que resta dos dois que a 001 deixou.
 
-**Falta para dar a feature por fechada:** a validação manual de
-`specs/002-flight-detail/quickstart.md` (secções 5 a 7), num dispositivo. O passo que mais importa é
-o 7 da secção 5: com o modo de avião ligado, o ecrã **não** pode anunciar que a aeronave saiu do
-céu. E a contagem de pedidos no Network Inspector com o detalhe aberto tem de ser igual à da lista
-sozinha (SC-008).
+**Validação em dispositivo (T041) feita a 2026-09-07:** os dois riscos que a revisão apontou
+verificaram-se no terreno. Com o modo de avião ligado o detalhe mantém os valores e diz a causa, sem
+nunca afirmar que a aeronave partiu; e ter o detalhe aberto não aumenta o número de pedidos face a
+ficar só na lista (SC-008), o que confirma que a sessão está mesmo partilhada.
+
+**Dívida ainda aberta, da 001:** a mediana do tempo de arranque (SC-001) e a cobertura da tabela de
+operadores (SC-004) continuam por medir. Nunca deram sinal de problema — ver os critérios de saída
+de `specs/001-sky-list/quickstart.md`.
 
 **Feature seguinte:** `003-settings` (desbloqueia o `SettingsRepositoryImpl`, que a AD-009 deixou
-por fazer, e fecha o segundo beco sem saída) ou `002-widget` como previsto na AD-003.
+por fazer, e fecha o último beco sem saída da app) ou `002-widget` como previsto na AD-003.

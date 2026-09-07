@@ -99,10 +99,15 @@ valores mais fáceis de trocar e os únicos que o céu desmente de imediato.
 
 ## Critérios de saída
 
-- [ ] `./gradlew :app:testDebugUnitTest` verde, incluindo os testes da 001 inalterados
-- [ ] `./gradlew :app:lintDebug` sem erros
-- [ ] Os nove passos da secção 5 verificados manualmente
-- [ ] Mesmo número de pedidos com o detalhe aberto e com a lista aberta (SC-008)
-- [ ] Nenhuma atividade de rede 10 s depois de ir para segundo plano com o detalhe aberto
-- [ ] Direção e rumo confirmados contra o céu real
-- [ ] Subagente `reviewer` executado e achados tratados
+Validação em dispositivo feita a 2026-09-07.
+
+- [X] `./gradlew :app:testDebugUnitTest` verde — 171 testes, incluindo os 131 da 001 inalterados
+- [X] `./gradlew :app:lintDebug` sem erros — 27 avisos, 0 erros
+- [X] Os passos da secção 5 verificados manualmente
+- [X] Mesmo número de pedidos com o detalhe aberto e com a lista aberta (SC-008)
+- [X] Nenhuma atividade de rede 10 s depois de ir para segundo plano com o detalhe aberto
+- [X] Direção a olhar e rumo da aeronave confirmados contra o céu real
+- [X] Subagente `reviewer` executado e achados tratados (T042)
+
+O passo que mais podia ter falhado — modo de avião a anunciar saída do céu — passou: com a rede
+desligada, o ecrã mantém os valores e diz a causa, sem nunca afirmar que a aeronave partiu.
