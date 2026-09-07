@@ -93,6 +93,9 @@ pedidos concorrentes" sai da forma do laço — uma só corrotina, sequencial, s
 "em curso". Um `while` em `viewModelScope` continuaria a consumir rede em segundo plano.
 **Consequência:** o WorkManager fica reservado para widget e notificações, como em AD-003. Cada
 ciclo pede uma posição pontual em vez de subscrever localização contínua.
+**Refinado pela AD-011:** o laço deixa de viver no `MainViewModel` e passa para uma `SkySession`
+partilhada, para servir também o ecrã de detalhe (`002-flight-detail`). A forma do laço e as
+propriedades que ela compra mantêm-se; muda o dono.
 **Correção durante a implementação:** o pedido manual chega por um `Channel(CONFLATED)` e não pelo
 `MutableSharedFlow` previsto. Um `SharedFlow` sem replay descarta o que é emitido enquanto não há
 coletor, e entre duas iterações do laço existe esse instante — um toque em "atualizar" que caísse
@@ -120,6 +123,48 @@ utilizador a razão de a lista não atualizar.
 **Trade-off aceite:** um erro de domínio é tecnicamente lançável. Mitigado anulando
 `fillInStackTrace` e nunca o lançando — só embrulhado em `Result.failure`. Alternativa anotada: um
 tipo `SkyResult<T>` próprio, se o `Result` vier a estorvar.
+
+### AD-011 — O laço de atualização vive numa `SkySession` partilhada, na `presentation`
+O laço periódico sai do `MainViewModel` para `presentation/sky/SkySession`, com escopo
+`@ActivityRetainedScoped`. Expõe `observation: StateFlow<SkyObservation>` por
+`stateIn(scope próprio, WhileSubscribed(5_000), ...)` e um `requestRefresh()` que substitui o
+`Channel(CONFLATED)` hoje privado do ViewModel. `MainViewModel` e `FlightDetailViewModel` passam a
+consumidores finos: cada um embrulha a mesma fonte com
+`stateIn(viewModelScope, WhileSubscribed(5_000), inicial)` e deriva o seu próprio estado de ecrã.
+**Porquê:** a 002 exige que os dois ecrãs mostrem os mesmos valores no mesmo instante e que estarem
+ambos vivos não duplique os pedidos. Uma contagem de subscritores partilhada resolve as duas coisas
+ao mesmo tempo, sem mutex e sem cache com validade. Na transição lista → detalhe a contagem passa
+por 1 → 2 → 1 sem chegar a zero, por isso o laço não reinicia nem repete um pedido. Fica em
+`presentation/` e não em `domain/` porque a cadência é política de apresentação — a regra de
+negócio continua inteira em `DetectOverheadFlightsUseCase`.
+**Rejeitadas:** ViewModel partilhado por `hiltViewModel(parentEntry)`, que acopla a partilha à
+topologia da navegação e mistura os campos dos dois ecrãs; laços independentes com mutex ou cache
+com validade, que reintroduzem a coordenação explícita que a AD-008 evitou e duplicam o backoff de
+429 em dois sítios que podem divergir.
+**Consequência:** `PermissionState` e o rationale ficam só no `MainViewModel` — é o único ecrã que
+pede permissão, e a `SkySession` nunca sabe o que é uma permissão; limita-se a consultar
+`hasLocationPermission()` a cada ciclo. Para que conceder a permissão não implique esperar pelo
+tique seguinte, o `MainViewModel` chama `requestRefresh()` na transição para `Granted`. Um refresh
+manual em qualquer dos ecrãs renova ambos, o que é o comportamento correto e não um efeito
+colateral. O escopo interno da sessão tem de ser cancelado em
+`ActivityRetainedLifecycle.addOnClearedListener`: não há limpeza automática. E a `SkySession` nunca
+é injetada em `worker/` nem em `widget/`, que continuam pelo `SkyRefreshWorker` (AD-003).
+
+### AD-012 — "Saiu do céu" é uma redução pura no `domain`
+A distinção entre aeronave atual, aeronave que saiu do céu e aeronave nunca observada vive em
+`domain/usecase/TrackFlightPresenceUseCase`, com a forma da `DetectOverheadFlightsUseCase`: recebe
+o estado de presença anterior, a observação mais recente (`List<OverheadFlight>?`, em que `null` é
+"o ciclo falhou" e é distinto de lista vazia), o `icao24` e `nowEpochSeconds`. A memória entre
+chamadas vive no `FlightDetailViewModel`.
+**Porquê:** é a categoria de defeito do princípio VI — mostrar a última posição como atual não
+produz erro nenhum, produz um resultado errado com ar de certo. Merece o mesmo tratamento que a
+geometria: função pura, sem relógio nem memória implícitos, testável na JVM. Fica fora da
+`SkySession` porque a memória é por ecrã e por aeronave, e a sessão tem de continuar sem estado por
+aeronave para servir os dois ecrãs.
+**Consequência:** um ciclo falhado nunca faz um avião sair do céu — é a linha da tabela de
+transições que separa informar de mentir. Depois de o processo morrer e ser restaurado com o
+detalhe no topo da pilha não há estado anterior, e a resposta correta é `NeverObserved`: nunca
+reaproveitar um voo anterior como se fosse atual.
 
 ## Estrutura de pastas
 
@@ -227,8 +272,7 @@ corresponde ao céu real. Por medir, sem sinal de problema: a mediana do arranqu
 cobertura da tabela de operadores (SC-004) e a ausência de rede em segundo plano — ver os critérios
 de saída de `specs/001-sky-list/quickstart.md`.
 
-**Feature seguinte:** o toque numa linha da lista abre `FlightDetailScreen`, que é um esqueleto
-vazio — é o beco sem saída mais visível da app e o candidato natural a `002-flight-detail`. O
-vetor de estado da OpenSky chega para um ecrã útil sem fonte nova; matrícula, tipo de aeronave e
-rota exigiriam uma, e isso é decisão para o `architect`. Em alternativa, `002-widget` como previsto
-na AD-003.
+**Feature em curso:** `specs/002-flight-detail` — ecrã de detalhe de uma aeronave, que fecha o
+beco sem saída deixado pela 001 (hoje o toque numa linha abre um ecrã vazio). Especificação fechada
+(16/16 no checklist) e plano com artefactos de desenho completos, incluindo AD-011 e AD-012.
+Próximo passo: `/speckit-tasks`.

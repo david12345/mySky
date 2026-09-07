@@ -201,8 +201,10 @@ permanecem visíveis, marcados como possivelmente desatualizados, com a causa ex
   comunicando a causa.
 - **FR-023**: A app MUST distinguir, nas mensagens, ausência de ligação, falha do serviço de voos
   e impossibilidade de obter a posição do utilizador.
-- **FR-024**: A app MUST continuar a apresentar os dados da aeronave que não dependem da posição
-  do utilizador quando essa posição não pode ser obtida.
+- **FR-024**: A app MUST manter visível a última observação conhecida, com a causa explicada,
+  quando a posição do utilizador não pode ser obtida. Sem posição não há consulta possível à fonte
+  de voos — é a posição que define a área a consultar — por isso não existe o caso de apresentar
+  dados novos da aeronave sem ela: o que a app tem a fazer é não apagar o que já mostrava.
 
 ### Key Entities
 
