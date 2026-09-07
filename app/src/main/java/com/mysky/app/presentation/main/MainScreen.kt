@@ -27,8 +27,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.mysky.app.R
 import com.mysky.app.presentation.main.format.FlightFormatting
 import com.mysky.app.presentation.main.format.Freshness
@@ -64,11 +67,12 @@ fun MainScreen(
         onPauseOrDispose {}
     }
 
-    // Num efeito e não no corpo da composição: chamar o ViewModel a cada recomposição repetiria
-    // a notificação sem que nada tivesse mudado.
-    LaunchedEffect(permission.requested, permission.isGranted, permission.canAskAgain) {
-        if (permission.requested) {
-            viewModel.onPermissionResult(permission.isGranted, permission.canAskAgain)
+    // Só depois de o sistema ter respondido: reagir ao lançamento do diálogo leria um
+    // `shouldShowRationale` ainda anterior ao pedido e daria uma recusa permanente inventada.
+    if (permission.hasResult) {
+        val outcome = permission.outcome
+        LaunchedEffect(outcome) {
+            viewModel.onPermissionResult(outcome.granted, outcome.canAskAgain)
         }
     }
 
@@ -180,10 +184,16 @@ private fun updatedLabel(updatedEpochSeconds: Long): String =
  */
 @Composable
 private fun rememberNowEpochSeconds(): Long {
+    val lifecycleOwner = LocalLifecycleOwner.current
     val now by produceState(initialValue = System.currentTimeMillis() / MILLIS_PER_SECOND) {
-        while (true) {
-            delay(1.seconds)
-            value = System.currentTimeMillis() / MILLIS_PER_SECOND
+        // Preso ao ciclo de vida e não só à composição: a árvore do Compose sobrevive ao ecrã ir
+        // para segundo plano, e sem isto a app continuaria a acordar de segundo a segundo para
+        // atualizar um rótulo que ninguém está a ver.
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(1.seconds)
+                value = System.currentTimeMillis() / MILLIS_PER_SECOND
+            }
         }
     }
     return now

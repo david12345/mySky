@@ -14,8 +14,11 @@ import com.mysky.app.domain.repository.AirlineDirectory
 import com.mysky.app.domain.repository.FlightRepository
 import com.mysky.app.domain.time.TimeProvider
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -187,5 +190,70 @@ class ObserveSkyUseCaseTest {
 
         assertTrue(result.isSuccess)
         assertTrue(result.getOrThrow().isEmpty())
+    }
+
+    // --- Nada sobe daqui por lançamento (AD-010) -------------------------------------------------
+
+    @Test
+    fun `excecao lancada pelo repositorio vira falha em vez de subir`() = runTest {
+        // Um repositório que lança em vez de devolver failure é um contrato quebrado, mas o laço do
+        // ViewModel não tem onde apanhar isto: rebentaria o processo em vez de mostrar um erro.
+        coEvery { flightRepository.getAircraftIn(any()) } throws IOException("socket fechado")
+
+        val error = useCase(LISBON).exceptionOrNull()
+
+        assertTrue(error is SkyError.Unexpected)
+        assertEquals("socket fechado", (error as SkyError.Unexpected).cause?.message)
+    }
+
+    @Test
+    fun `SkyError lancado nao e embrulhado outra vez`() = runTest {
+        coEvery { flightRepository.getAircraftIn(any()) } throws SkyError.NoConnection
+
+        assertEquals(SkyError.NoConnection, useCase(LISBON).exceptionOrNull())
+    }
+
+    @Test
+    fun `raio invalido nos criterios vira falha em vez de rebentar`() = runTest {
+        // `boundingBoxesAround` valida o raio com um `require`. AD-009 prevê que a feature de
+        // definições passe a alimentar estes critérios: um valor mau vindo de lá tem de aparecer no
+        // ecrã como erro, não como crash.
+        val result = useCase(LISBON, OverheadCriteria(maxHorizontalDistanceMeters = 0.0))
+
+        assertTrue(result.exceptionOrNull() is SkyError.Unexpected)
+    }
+
+    @Test
+    fun `excecao na detecao vira falha em vez de subir`() = runTest {
+        // `Result.map` corre a transformação sem a proteger: sem o try/catch do caso de uso, uma
+        // falha aqui dentro passava ao lado do `Result` e saía por lançamento.
+        val detector = mockk<DetectOverheadFlightsUseCase>()
+        every { detector(any(), any(), any(), any()) } throws IllegalStateException("geometria")
+        val useCase = ObserveSkyUseCase(
+            flightRepository = flightRepository,
+            geoCalculator = geoCalculator,
+            detectOverheadFlights = detector,
+            airlineDirectory = airlineDirectory,
+            timeProvider = timeProvider,
+        )
+        repositoryReturns(overhead("aaa111", altitudeMeters = 10_000.0))
+
+        assertTrue(useCase(LISBON).exceptionOrNull() is SkyError.Unexpected)
+    }
+
+    @Test
+    fun `cancelamento sobe em vez de virar falha`() = runTest {
+        // Cancelar é o ecrã a deixar de estar visível (FR-019), não um erro para mostrar. Convertê-lo
+        // em `Result.failure` faria a UI piscar um erro sempre que a app fosse para segundo plano.
+        coEvery { flightRepository.getAircraftIn(any()) } throws CancellationException("ecrã escondido")
+
+        var propagated = false
+        try {
+            useCase(LISBON)
+        } catch (cancellation: CancellationException) {
+            propagated = true
+        }
+
+        assertTrue(propagated)
     }
 }

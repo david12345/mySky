@@ -208,12 +208,23 @@ documento em caso de conflito.
 
 ## Estado atual
 
-Esqueleto inicial. Compila, o APK de debug gera e os testes do `domain` passam.
-Implementado a sério: `GeoCalculator` e `DetectOverheadFlightsUseCase` (com testes).
-Tudo o resto são interfaces e stubs com `TODO(feature/...)`.
+**`001-sky-list` implementada.** O ecrã principal vai à OpenSky, calcula o que está no céu do
+utilizador, resolve o operador pelo indicativo e atualiza-se de 30 em 30 segundos enquanto está
+visível. 131 testes unitários verdes, lint sem erros, APK de debug a gerar.
 
-**Feature em curso:** `specs/001-sky-list` — lista de aviões no céu. Especificação fechada (16/16
-no checklist), plano com artefactos de desenho completos e `tasks.md` com 55 tarefas.
-`/speckit-analyze` corrido: cobertura de 100% dos FR, sem violações constitucionais; os achados
-(fonte da tabela de operadores, leitura do asset em testes JVM, produtor de `LocationUnavailable`,
-chave estável da lista) foram corrigidos nos artefactos. Próximo passo: `/speckit-implement`.
+O que ficou a funcionar de ponta a ponta: `OpenSkyFlightDataSource` → `FlightRepositoryImpl`
+(caixas em paralelo, deduplicação por `icao24`, tradução para `SkyError`) → `ObserveSkyUseCase`
+(deteção + operador) → `MainViewModel` (laço sequencial de AD-008) → `MainScreen` (seis estados:
+rationale, recusa permanente, primeiro carregamento, erro bloqueante, céu vazio e lista).
+`AssetAirlineDirectory` lê 5774 operadores de `assets/airlines.json`, gerado por
+`tools/airlines/build_airlines_json.py` a partir do `airlines.dat` do OpenFlights.
+
+Continuam por implementar, como esqueleto com `TODO(feature/...)`: `SettingsRepositoryImpl`,
+`SightingRepository`/Room, `LocationRepositoryImpl.locationUpdates`, widget, worker e notificações.
+
+**Falta para dar a feature por fechada:** T053 — a validação manual de
+`specs/001-sky-list/quickstart.md` (secções 4 a 6) contra o céu real, num dispositivo. Exige
+hardware e vista para o céu; nada nela é automatizável, e SC-001 a SC-005 só ficam verificados
+depois disso.
+
+**Feature seguinte:** `002-widget` (AD-003), a começar por `/speckit-specify`. Só depois de T053.

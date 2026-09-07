@@ -188,8 +188,26 @@ voltar atrás regressa à lista.
 - [X] T051 [P] Verificar que a feature nunca pede `ACCESS_BACKGROUND_LOCATION` em runtime (FR-004, princípio III): `grep -rn "ACCESS_BACKGROUND_LOCATION" app/src/main/java/` tem de não devolver nada — a permissão continua declarada no manifesto para features futuras, mas declarar não é pedir
 - [X] T052 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes (cobre SC-003, SC-006 e SC-007 na parte automatizada)
 - [ ] T053 Executar a validação manual de [quickstart.md](./quickstart.md) secções 4 a 6 e preencher os critérios de saída: os seis estados (SC-005), tempo até à primeira lista abaixo de 5 s (SC-001), cobertura da tabela de operadores em 100 entradas reais (SC-004), ausência de rede em segundo plano (SC-007), e a verificação contra o céu real (SC-002, SC-003)
-- [ ] T054 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (exigência da constituição, princípio VI)
-- [ ] T055 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
+- [X] T054 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (exigência da constituição, princípio VI)
+- [X] T055 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
+
+### Achados da revisão (T054)
+
+Dez achados; todos tratados. Os dois críticos e cinco "deveria corrigir" deram alterações de
+código, e os três restantes eram lacunas de teste:
+
+| # | Achado | Tratamento |
+|---|---|---|
+| 1 | `ObserveSkyUseCase` deixava subir por lançamento tudo o que não fosse `Result.failure` do repositório | `try/catch` a devolver `SkyError`, com `CancellationException` relançada |
+| 2 | `hasResult` marcado por `request()` e não pela resposta do sistema: sair da app durante o diálogo prendia o utilizador no ecrã de recusa permanente | passou a ser marcado pelo callback do pedido |
+| 3 | `runSkyLoop` mantinha a fase de carregamento quando a permissão não estava concedida | repõe `LoadPhase.Idle` nesse ramo |
+| 4 | sem localização (interior, GPS desligado) o ecrã ficava preso em "A obter a tua localização…" | `withTimeoutOrNull` de 3 s no fix atual e 2 s no último conhecido |
+| 5 | nenhum teste com exceção lançada em vez de `Result.failure` | cinco casos novos em `ObserveSkyUseCaseTest` (repositório, deteção, raio inválido, `SkyError` não re-embrulhado, cancelamento) |
+| 6 | nenhum caso de observador polar | dois casos novos em `DetectOverheadFlightsUseCaseTest` (±90 de latitude) |
+| 7 | lógica de permissão não testável na JVM | extraída para `permissionOutcomeOf`, com `LocationPermissionTest` a fixar a tabela de verdade |
+| 8 | o "há X s" era calculado uma vez e congelava | ticker de 1 s dentro de `repeatOnLifecycle(RESUMED)` |
+| 9 | `build_airlines_json.py` devolvia `str` numa função tipada `-> int` | `return 1` e mensagem para `stderr` |
+| 10 | `sky_permission_denied_title` usado também no ecrã de rationale | renomeado para `sky_permission_title` |
 
 ---
 

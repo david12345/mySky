@@ -5,6 +5,7 @@ import com.mysky.app.domain.model.Aircraft
 import com.mysky.app.domain.model.GeoPosition
 import com.mysky.app.domain.model.OverheadCriteria
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -87,5 +88,37 @@ class DetectOverheadFlightsUseCaseTest {
         )
         val result = useCase(observer, listOf(lower, overhead), nowEpochSeconds = now)
         assertEquals(listOf("aaa111", "bbb222"), result.map { it.aircraft.icao24 })
+    }
+
+    // --- Limites da esfera: polos ---------------------------------------------------------------
+
+    @Test
+    fun `observador no polo norte ve o aviao por cima venha a longitude que vier`() {
+        // No polo todos os meridianos convergem no mesmo ponto: a longitude da aeronave não muda
+        // nem a distância nem a elevação. Uma fórmula que trate longitude como deslocamento daria
+        // aqui milhares de quilómetros de distância e faria o avião desaparecer da lista.
+        val pole = GeoPosition(latitudeDegrees = 90.0, longitudeDegrees = 0.0)
+        val overPole = aircraft(position = GeoPosition(latitudeDegrees = 90.0, longitudeDegrees = 137.0))
+
+        val flight = useCase(pole, listOf(overPole), nowEpochSeconds = now).single()
+
+        assertEquals(0.0, flight.horizontalDistanceMeters, 1.0)
+        assertEquals(90.0, flight.elevationDegrees, 0.001)
+    }
+
+    @Test
+    fun `observador no polo sul obtem geometria finita para uma aeronave proxima`() {
+        // cos(latitude) anula-se no polo: é onde um azimute mal calculado devolve NaN e a ordenação
+        // por elevação passa a depender da ordem de chegada.
+        val pole = GeoPosition(latitudeDegrees = -90.0, longitudeDegrees = 0.0)
+        val nearby = aircraft(position = GeoPosition(latitudeDegrees = -89.9, longitudeDegrees = 45.0))
+
+        val flight = useCase(pole, listOf(nearby), nowEpochSeconds = now).single()
+
+        // 0,1 grau de latitude ~ 11,1 km; a 10 000 m de altitude são ~42 graus de elevação.
+        assertEquals(11_119.0, flight.horizontalDistanceMeters, 100.0)
+        assertEquals(42.0, flight.elevationDegrees, 1.0)
+        assertFalse(flight.bearingDegrees.isNaN())
+        assertTrue(flight.bearingDegrees >= 0.0 && flight.bearingDegrees < 360.0)
     }
 }

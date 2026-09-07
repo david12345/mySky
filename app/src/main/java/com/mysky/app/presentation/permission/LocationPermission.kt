@@ -26,10 +26,26 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.mysky.app.R
+
+/** Resposta do sistema a um pedido de permissão, reduzida ao que o ViewModel precisa de saber. */
+data class PermissionOutcome(val granted: Boolean, val canAskAgain: Boolean)
+
+/**
+ * Regra que decide se ainda vale a pena voltar a pedir, ou se só as definições resolvem.
+ *
+ * Função pura e sem Compose, para ser testável na JVM: é a lógica onde um engano manda o
+ * utilizador para um ecrã "recusaste de forma permanente" de que não há como sair.
+ *
+ * `shouldShowRationale` **só tem significado depois de o sistema ter devolvido um resultado** —
+ * antes do primeiro pedido vale `false`, exatamente como numa recusa permanente. Por isso esta
+ * função nunca deve ser chamada antes de haver resposta; quem a chama garante isso.
+ */
+fun permissionOutcomeOf(granted: Boolean, shouldShowRationale: Boolean): PermissionOutcome =
+    PermissionOutcome(granted = granted, canAskAgain = granted || shouldShowRationale)
 
 /**
  * Fluxo de permissão de localização.
@@ -44,30 +60,33 @@ import com.mysky.app.R
 @OptIn(ExperimentalPermissionsApi::class)
 class LocationPermissionController internal constructor(
     private val state: MultiplePermissionsState,
-    private val requestedState: MutableState<Boolean>,
+    private val resultReceived: MutableState<Boolean>,
 ) {
     /** Aproximada chega: basta uma das duas ter sido concedida. */
     val isGranted: Boolean get() = state.permissions.any { it.status.isGranted }
 
-    /** `false` enquanto o diálogo do sistema nunca foi mostrado: aí ainda é hora do rationale. */
-    val requested: Boolean get() = requestedState.value
-
     /**
-     * Antes do primeiro pedido o sistema mostra sempre o diálogo. Depois, `shouldShowRationale`
-     * distingue uma recusa de uma recusa permanente — é o único sinal que o Android dá, e sem ele
-     * a app não saberia se deve voltar a pedir ou encaminhar para as definições.
+     * `false` enquanto o sistema nunca devolveu uma resposta.
+     *
+     * É marcado pelo callback do pedido e **não** por [request]: entre lançar o diálogo e o
+     * utilizador responder passam-se recomposições em que `shouldShowRationale` ainda tem o valor
+     * de antes do pedido. Reportar o resultado nesse intervalo classificaria como recusa
+     * permanente uma permissão a que ninguém tinha respondido ainda — e, se o utilizador saísse da
+     * app antes de responder, deixá-lo-ia preso no ecrã das definições ao voltar.
      */
-    val canAskAgain: Boolean get() = !requested || state.shouldShowRationale
+    val hasResult: Boolean get() = resultReceived.value
 
-    fun request() {
-        requestedState.value = true
-        state.launchMultiplePermissionRequest()
-    }
+    /** Só faz sentido ler depois de [hasResult] ser `true`. */
+    val outcome: PermissionOutcome
+        get() = permissionOutcomeOf(isGranted, state.shouldShowRationale)
+
+    fun request() = state.launchMultiplePermissionRequest()
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun rememberLocationPermissionController(): LocationPermissionController {
+    val resultReceived = rememberSaveable { mutableStateOf(false) }
     // Fine vai no pedido porque o sistema mostra as duas opções no mesmo diálogo; a app funciona
     // com a aproximada e é isso que `LocationRepository` verifica.
     val state = rememberMultiplePermissionsState(
@@ -75,9 +94,9 @@ fun rememberLocationPermissionController(): LocationPermissionController {
             Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.ACCESS_FINE_LOCATION,
         ),
-    )
-    val requested = rememberSaveable { mutableStateOf(false) }
-    return remember(state, requested) { LocationPermissionController(state, requested) }
+    ) { resultReceived.value = true }
+
+    return remember(state, resultReceived) { LocationPermissionController(state, resultReceived) }
 }
 
 /**
@@ -92,7 +111,7 @@ fun LocationRationale(
     modifier: Modifier = Modifier,
 ) {
     PermissionMessage(
-        title = stringResource(R.string.sky_permission_denied_title),
+        title = stringResource(R.string.sky_permission_title),
         body = stringResource(R.string.permission_location_rationale),
         actionLabel = stringResource(R.string.sky_permission_grant),
         onAction = onRequestPermission,
@@ -110,7 +129,7 @@ fun LocationPermanentlyDenied(modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     PermissionMessage(
-        title = stringResource(R.string.sky_permission_denied_title),
+        title = stringResource(R.string.sky_permission_title),
         body = stringResource(R.string.sky_permission_permanently_denied_body),
         actionLabel = stringResource(R.string.sky_permission_open_settings),
         onAction = { context.openAppSettings() },

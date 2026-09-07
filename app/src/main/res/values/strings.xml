@@ -31,7 +31,7 @@
     <string name="sky_stale_warning">Estes dados podem estar desatualizados.</string>
 
     <!-- Permissão de localização (FR-005). O rationale reutiliza permission_location_rationale. -->
-    <string name="sky_permission_denied_title">A mySky precisa da tua localização</string>
+    <string name="sky_permission_title">A mySky precisa da tua localização</string>
     <string name="sky_permission_grant">Conceder localização</string>
     <string name="sky_permission_permanently_denied_body">Recusaste a permissão de localização de forma permanente. Podes voltar a concedê-la nas definições do sistema.</string>
     <string name="sky_permission_open_settings">Abrir definições</string>

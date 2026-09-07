@@ -5,6 +5,7 @@ import com.mysky.app.domain.model.Airline
 import com.mysky.app.domain.model.GeoPosition
 import com.mysky.app.domain.model.OverheadCriteria
 import com.mysky.app.domain.model.OverheadFlight
+import com.mysky.app.domain.model.SkyError
 import com.mysky.app.domain.repository.AirlineDirectory
 import com.mysky.app.domain.repository.FlightRepository
 import com.mysky.app.domain.time.TimeProvider
@@ -26,10 +27,20 @@ class ObserveSkyUseCase @Inject constructor(
     private val airlineDirectory: AirlineDirectory,
     private val timeProvider: TimeProvider,
 ) {
+    /**
+     * Nada sai daqui por lançamento, nem sequer o que é culpa de quem chama.
+     *
+     * `Result.map` executa a transformação sem a proteger, e `boundingBoxesAround` valida o raio
+     * com um `require`. Hoje o único chamador passa os critérios por omissão, mas AD-009 diz que a
+     * feature de definições passará a alimentar este parâmetro sem mudar a assinatura — e um raio
+     * inválido vindo de lá subiria pelo laço do ViewModel até rebentar o processo, em vez de
+     * aparecer como um erro no ecrã. AD-010 promete `SkyError` dentro de `Result`; é aqui que essa
+     * promessa se cumpre para tudo o que acontece acima da fronteira do repositório.
+     */
     suspend operator fun invoke(
         observer: GeoPosition,
         criteria: OverheadCriteria = OverheadCriteria(),
-    ): Result<List<OverheadFlight>> {
+    ): Result<List<OverheadFlight>> = try {
         // Duas caixas quando o raio cruza o antimeridiano; a deduplicação das aeronaves que
         // aparecem nas duas é do repositório, que é quem sabe que a consulta foi partida.
         val boxes = geoCalculator.boundingBoxesAround(
@@ -37,7 +48,7 @@ class ObserveSkyUseCase @Inject constructor(
             radiusMeters = criteria.maxHorizontalDistanceMeters,
         )
 
-        return flightRepository.getAircraftIn(boxes).map { aircraft ->
+        flightRepository.getAircraftIn(boxes).map { aircraft ->
             detectOverheadFlights(
                 observer = observer,
                 aircraft = aircraft,
@@ -45,6 +56,11 @@ class ObserveSkyUseCase @Inject constructor(
                 nowEpochSeconds = timeProvider.nowEpochSeconds(),
             ).map { flight -> flight.copy(airline = resolveAirline(flight.aircraft.callsign)) }
         }
+    } catch (cancellation: CancellationException) {
+        // Cancelamento não é falha: é o ecrã a deixar de estar visível (FR-019).
+        throw cancellation
+    } catch (throwable: Exception) {
+        Result.failure(throwable as? SkyError ?: SkyError.Unexpected(throwable))
     }
 
     /**

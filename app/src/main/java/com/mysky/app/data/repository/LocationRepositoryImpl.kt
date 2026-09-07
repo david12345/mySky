@@ -14,8 +14,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Localização via Fused Location Provider.
@@ -60,12 +62,18 @@ class LocationRepositoryImpl @Inject constructor(
      */
     private suspend fun currentLocation(): GeoPosition? = try {
         val cancellation = CancellationTokenSource()
-        suspendCancellableCoroutine { continuation ->
-            continuation.invokeOnCancellation { cancellation.cancel() }
-            fusedLocationClient
-                .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellation.token)
-                .addOnSuccessListener { continuation.resume(it?.toGeoPosition()) }
-                .addOnFailureListener { continuation.resume(null) }
+        // Prazo nosso e não o do Fused Location: sem ele, um sítio sem fix (interior, GPS
+        // desligado) deixaria o ecrã em "A obter a tua localização…" por tempo indeterminado, e
+        // SC-001 pede a lista em menos de 5 s. Esgotado o prazo, uma posição antiga vale mais do
+        // que continuar à espera de uma nova.
+        withTimeoutOrNull(CURRENT_FIX_TIMEOUT) {
+            suspendCancellableCoroutine { continuation ->
+                continuation.invokeOnCancellation { cancellation.cancel() }
+                fusedLocationClient
+                    .getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellation.token)
+                    .addOnSuccessListener { continuation.resume(it?.toGeoPosition()) }
+                    .addOnFailureListener { continuation.resume(null) }
+            }
         }
     } catch (security: SecurityException) {
         null
@@ -73,10 +81,14 @@ class LocationRepositoryImpl @Inject constructor(
 
     /** Recurso para quando não há fix novo a tempo: uma posição antiga é melhor do que nenhuma. */
     private suspend fun lastLocation(): GeoPosition? = try {
-        suspendCancellableCoroutine { continuation ->
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { continuation.resume(it?.toGeoPosition()) }
-                .addOnFailureListener { continuation.resume(null) }
+        // É uma leitura de cache e devia ser imediata, mas o prazo existe para que um serviço do
+        // Google Play em mau estado não prenda o ciclo de atualização.
+        withTimeoutOrNull(LAST_KNOWN_TIMEOUT) {
+            suspendCancellableCoroutine { continuation ->
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { continuation.resume(it?.toGeoPosition()) }
+                    .addOnFailureListener { continuation.resume(null) }
+            }
         }
     } catch (security: SecurityException) {
         null
@@ -91,6 +103,10 @@ class LocationRepositoryImpl @Inject constructor(
     )
 
     private companion object {
+        /** Cabe dentro dos 5 s de SC-001 e deixa margem para o pedido de voos. */
+        val CURRENT_FIX_TIMEOUT = 3.seconds
+        val LAST_KNOWN_TIMEOUT = 2.seconds
+
         val LOCATION_PERMISSIONS = listOf(
             Manifest.permission.ACCESS_COARSE_LOCATION,
             Manifest.permission.ACCESS_FINE_LOCATION,

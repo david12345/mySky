@@ -100,8 +100,17 @@ class MainViewModel @Inject constructor(
      */
     private suspend fun runSkyLoop() {
         permission.collectLatest { permissionState ->
+            if (permissionState != PermissionState.Granted) {
+                // `collectLatest` já cancelou o pedido em curso; repor a fase é o que impede que
+                // `phase` fique congelado em `LoadingFlights` depois de a permissão ser revogada
+                // (invariante 1 do contrato de UI). Hoje a precedência do ecrã tapa isto, mas o
+                // estado é partilhado e não pode mentir a quem o venha a ler noutro sítio.
+                mutableState.update {
+                    it.copy(permission = permissionState, phase = LoadPhase.Idle)
+                }
+                return@collectLatest
+            }
             mutableState.update { it.copy(permission = permissionState) }
-            if (permissionState != PermissionState.Granted) return@collectLatest
             refreshLoop()
         }
     }

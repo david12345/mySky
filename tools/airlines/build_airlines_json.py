@@ -82,7 +82,8 @@ def main() -> int:
     table = build_table(csv.reader(text.splitlines()))
     if len(table) < 1000:
         # O mesmo limiar de AirlineTableCoverageTest: falhar aqui em vez de gerar um asset pobre.
-        return f"ERRO: apenas {len(table)} operadores — a fonte ou o filtro estão errados."
+        print(f"ERRO: apenas {len(table)} operadores — a fonte ou o filtro estão errados.", file=sys.stderr)
+        return 1
 
     # Uma entrada por linha e chaves ordenadas: o asset é commitado, e um diff legível é o que
     # torna revisível uma atualização da tabela.
