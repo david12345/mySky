@@ -33,12 +33,16 @@ variantes, porque são exatamente três as situações que FR-019 obriga a disti
 ```
 sealed interface FlightPresence {
     data object NeverObserved : FlightPresence
-    data class Current(val flight: OverheadFlight) : FlightPresence
+    data class Current(val flight: OverheadFlight, val observedAtEpochSeconds: Long) : FlightPresence
     data class LeftSky(val lastFlight: OverheadFlight, val lastSeenEpochSeconds: Long) : FlightPresence
 }
 ```
 
 **Invariantes**:
+- `Current` transporta o instante da observação que o produziu. Sem isso, a transição para
+  `LeftSky` teria de datar a última observação com o instante em que se **descobriu** a ausência —
+  um ciclo inteiro mais tarde, o que daria os valores por mais recentes do que são. (Acrescentado
+  durante a implementação.)
 - `LeftSky` transporta sempre o último voo conhecido **e** o instante em que foi visto. Um sem o
   outro permitiria apresentar dados antigos sem os datar, que é o que FR-020 proíbe.
 - `NeverObserved` não é o mesmo que "céu vazio": significa que esta aeronave nunca foi vista
@@ -55,6 +59,7 @@ que é exclusivo do ecrã principal.
 ```
 data class SkyObservation(
     val phase: LoadPhase = LoadPhase.Idle,
+    val observationSequence: Long = 0,
     val flights: List<OverheadFlight> = emptyList(),
     val lastUpdatedEpochSeconds: Long? = null,
     val lastError: SkyError? = null,
@@ -70,6 +75,10 @@ ecrã.
   agora no sítio partilhado.
 - `lastUpdatedEpochSeconds == null` se e só se nunca houve uma observação bem sucedida nesta
   sessão.
+- `observationSequence` conta as observações bem sucedidas e é o que dá **identidade** a uma
+  observação. A marca temporal não serve para isso: tem granularidade de segundo, e dois ciclos
+  podem cair no mesmo — quem comparasse marcas temporais concluiria que nada mudou e deixaria de
+  detetar uma aeronave que saiu do céu nesse segundo. (Acrescentado durante a revisão.)
 
 ### `FlightDetailUiState` — `presentation/detail`
 
@@ -97,7 +106,7 @@ impossível de renderizar. **Nenhum derivado entra no construtor**: a regra do `
 |---|---|---|
 | `flight` | o `OverheadFlight` de `Current` ou de `LeftSky`, `null` em `NeverObserved` | FR-005, FR-006 |
 | `hasLeftSky` | `presence is LeftSky` | FR-020 |
-| `isWaitingFirstObservation` | `presence is NeverObserved && lastUpdatedEpochSeconds == null` | — |
+| `isWaitingFirstObservation` | `presence is NeverObserved && lastUpdatedEpochSeconds == null && lastError == null` | — |
 | `hasStaleData` | `lastError != null && presence !is NeverObserved` | FR-022 |
 | `isBlockingError` | `lastError != null && presence is NeverObserved` | FR-023 |
 

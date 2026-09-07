@@ -1,4 +1,4 @@
-package com.mysky.app.presentation.main
+package com.mysky.app.presentation.format
 
 import androidx.annotation.StringRes
 import com.mysky.app.R

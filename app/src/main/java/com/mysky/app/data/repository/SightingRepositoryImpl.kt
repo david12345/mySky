@@ -8,7 +8,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 
 /**
- * TODO(feature/flight-detail): implementar mapeamento entidade <-> domínio e política de retenção.
+ * TODO(feature/sightings): implementar mapeamento entidade <-> domínio e política de retenção.
  */
 @Singleton
 class SightingRepositoryImpl @Inject constructor(

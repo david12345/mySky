@@ -1,4 +1,4 @@
-package com.mysky.app.presentation.main
+package com.mysky.app.presentation.format
 
 import com.mysky.app.domain.model.SkyError
 import org.junit.Assert.assertEquals

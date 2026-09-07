@@ -20,26 +20,24 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.repeatOnLifecycle
 import com.mysky.app.R
-import com.mysky.app.presentation.main.format.FlightFormatting
-import com.mysky.app.presentation.main.format.Freshness
+import com.mysky.app.presentation.format.FlightFormatting
+import com.mysky.app.presentation.format.freshnessText
+import com.mysky.app.presentation.format.messageRes
+import com.mysky.app.presentation.format.rememberNowEpochSeconds
+import com.mysky.app.presentation.format.retryActionRes
 import com.mysky.app.presentation.permission.LocationPermanentlyDenied
 import com.mysky.app.presentation.permission.LocationRationale
 import com.mysky.app.presentation.permission.rememberLocationPermissionController
-import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.delay
+import com.mysky.app.presentation.sky.LoadPhase
 
 /**
  * Ecrã principal: lista de aviões atualmente no céu do utilizador.
@@ -152,7 +150,10 @@ private fun StatusHeader(uiState: MainUiState) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         uiState.lastUpdatedEpochSeconds?.let { updated ->
-            Text(text = updatedLabel(updated), style = MaterialTheme.typography.labelMedium)
+            Text(
+                text = freshnessText(rememberNowEpochSeconds(), updated),
+                style = MaterialTheme.typography.labelMedium,
+            )
         }
         if (uiState.hasStaleResults) {
             Text(
@@ -163,43 +164,6 @@ private fun StatusHeader(uiState: MainUiState) {
         }
     }
 }
-
-@Composable
-private fun updatedLabel(updatedEpochSeconds: Long): String =
-    when (val freshness = FlightFormatting.freshnessOf(rememberNowEpochSeconds(), updatedEpochSeconds)) {
-        Freshness.JustNow -> stringResource(R.string.sky_updated_just_now)
-        is Freshness.Seconds -> stringResource(R.string.sky_updated_seconds_ago, freshness.value)
-        is Freshness.Minutes -> stringResource(R.string.sky_updated_minutes_ago, freshness.value)
-    }
-
-/**
- * Instante atual, a avançar de segundo a segundo enquanto o rótulo estiver no ecrã.
- *
- * Sem o tique, "há 12 s" ficaria congelado até à atualização seguinte e diria ao utilizador
- * exatamente o contrário do que FR-018 pretende. O tique não faz rede nem lê localização, e morre
- * com a composição.
- *
- * O relógio só é lido aqui, para compor um rótulo: o domínio recebe o tempo por abstração
- * (`TimeProvider`) e nunca o lê (princípio I).
- */
-@Composable
-private fun rememberNowEpochSeconds(): Long {
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val now by produceState(initialValue = System.currentTimeMillis() / MILLIS_PER_SECOND) {
-        // Preso ao ciclo de vida e não só à composição: a árvore do Compose sobrevive ao ecrã ir
-        // para segundo plano, e sem isto a app continuaria a acordar de segundo a segundo para
-        // atualizar um rótulo que ninguém está a ver.
-        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            while (true) {
-                delay(1.seconds)
-                value = System.currentTimeMillis() / MILLIS_PER_SECOND
-            }
-        }
-    }
-    return now
-}
-
-private const val MILLIS_PER_SECOND = 1_000L
 
 @Composable
 private fun LoadingState(phase: LoadPhase) {

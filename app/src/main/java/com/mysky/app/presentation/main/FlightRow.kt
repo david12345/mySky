@@ -15,7 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mysky.app.R
 import com.mysky.app.domain.model.OverheadFlight
-import com.mysky.app.presentation.main.format.FlightFormatting
+import com.mysky.app.presentation.format.FlightFormatting
 
 /**
  * Uma aeronave na lista.

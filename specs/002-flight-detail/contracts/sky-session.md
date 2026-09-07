@@ -15,6 +15,7 @@ class SkySession @Inject constructor(
 ) {
     val observation: StateFlow<SkyObservation>
     fun requestRefresh()
+    fun onPermissionMayHaveChanged()
 }
 ```
 
@@ -29,7 +30,7 @@ class SkySession @Inject constructor(
 | 5 | Uma falha nunca limpa `flights` nem `lastUpdatedEpochSeconds` | FR-022 | ciclo com sucesso seguido de ciclo com erro |
 | 6 | Um 429 alonga a espera seguinte para `max(30 s, retryAfter)` | herdado de FR-021 da 001 | tempo virtual |
 | 7 | `requestRefresh()` acorda o ciclo de imediato e reinicia o relógio dos 30 s | FR-015 | tempo virtual |
-| 8 | Dois `requestRefresh()` seguidos valem por um; um `requestRefresh()` **nunca** se perde | herdado de AD-008 | canal conflado, testado como na 001 |
+| 8 | Vários `requestRefresh()` durante um ciclo em curso valem por um; nenhum se perde nem gera pedido concorrente | herdado de AD-008 | gate no ciclo em curso, com toques durante ele |
 | 9 | O escopo interno é cancelado quando a `ActivityRetainedLifecycle` termina | — | `addOnClearedListener` |
 
 A invariante 1 é a razão de existir desta classe. A 3 é a que se parte sem ninguém dar por isso: um
@@ -60,9 +61,17 @@ A `SkySession` não sabe o que é uma permissão. Consulta `locationRepository.h
 no início de cada ciclo; sem permissão, publica `phase = Idle` e espera pelo tique seguinte ou por
 um `requestRefresh()`.
 
-Cabe ao `MainViewModel` — o único ecrã que pede permissão — chamar `requestRefresh()` na transição
-para `Granted`. Sem isso, o utilizador que acabou de conceder ficaria até 30 s a olhar para o ecrã
-de rationale, contra o SC-001 da 001.
+Cabe ao `MainViewModel` — o único ecrã que pede permissão — chamar `onPermissionMayHaveChanged()`
+sempre que a permissão esteja concedida, sem tentar adivinhar se isso é novidade. A sessão acorda o
+laço **só** se o último ciclo tiver sido saltado por falta de permissão, o que separa dois casos que
+de fora se confundem: quem acabou de conceder tem de ver a lista já, e quem abriu a app com a
+permissão de ontem não pode gerar um segundo pedido em cima do primeiro ciclo.
+
+Decidir isto no ViewModel, a partir do estado de permissão anterior, **não funciona**: a reavaliação
+ao retomar o ecrã e a resposta ao diálogo do sistema disparam na mesma transição e sem ordem
+garantida entre si. Basta a primeira pôr a permissão em `Granted` para a segunda ver
+`previous == Granted` e nenhuma das duas acordar o laço — e quem acabou de conceder fica até 30 s a
+olhar para o rationale, contra o SC-001 da 001.
 
 ## Fronteiras
 

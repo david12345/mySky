@@ -9,9 +9,12 @@ import com.mysky.app.domain.repository.LocationRepository
 import com.mysky.app.domain.time.TimeProvider
 import com.mysky.app.domain.usecase.ObserveSkyUseCase
 import com.mysky.app.overheadFlight
+import com.mysky.app.presentation.sky.skySession
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -30,15 +33,24 @@ class MainViewModelConfigChangeTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    /** Mesmo scheduler do `runTest`: sem isto o tempo virtual da sessão seria outro. */
+    private val testDispatcher = StandardTestDispatcher(mainDispatcherRule.scheduler)
+
     private val observeSky = mockk<ObserveSkyUseCase>()
     private val locationRepository = mockk<LocationRepository>(relaxed = true)
+
+    init {
+        // A sessão pergunta a permissão ao repositório uma vez por ciclo (AD-011), em vez de ser
+        // comandada pelo estado do ViewModel. Os testes que exercitam o laço têm de o dizer aqui;
+        // os que testam a ausência de permissão sobrepõem-se a isto explicitamente.
+        every { locationRepository.hasLocationPermission() } returns true
+    }
 
     private val flight = overheadFlight(aircraft = aircraft(icao24 = "aaa111"))
 
     private fun viewModel() = MainViewModel(
-        observeSky,
+        skySession(observeSky, locationRepository, testDispatcher),
         locationRepository,
-        TimeProvider { NOW_EPOCH_SECONDS },
     )
 
     @Test
@@ -51,7 +63,7 @@ class MainViewModelConfigChangeTest {
             // Primeira "activity": carrega e mostra a lista.
             viewModel.uiState.test {
                 awaitItem()
-                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                viewModel.onScreenVisible()
                 val loaded = awaitItemWhere { it.lastUpdatedEpochSeconds != null }
                 assertEquals(1, loaded.flights.size)
             }
@@ -80,7 +92,7 @@ class MainViewModelConfigChangeTest {
 
             viewModel.uiState.test {
                 awaitItem()
-                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                viewModel.onScreenVisible()
                 awaitItemWhere { it.lastError != null }
             }
 

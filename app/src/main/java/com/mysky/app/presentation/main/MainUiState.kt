@@ -2,6 +2,8 @@ package com.mysky.app.presentation.main
 
 import com.mysky.app.domain.model.OverheadFlight
 import com.mysky.app.domain.model.SkyError
+import com.mysky.app.presentation.sky.LoadPhase
+import com.mysky.app.presentation.sky.SkyObservation
 
 /** Estado da permissão de localização tal como o ecrã precisa de o distinguir. */
 enum class PermissionState {
@@ -14,27 +16,31 @@ enum class PermissionState {
     PermanentlyDenied,
 }
 
-/** Fase da operação em curso. As duas primeiras têm de ser distinguíveis na UI (FR-022). */
-enum class LoadPhase { Idle, LocatingUser, LoadingFlights }
-
 /**
  * Estado do ecrã principal. Um único data class imutável em vez de vários `StateFlow`, para que a
  * UI nunca observe combinações impossíveis.
  *
- * Os estados compostos — céu vazio, dados desatualizados, primeira carga — são **derivados**, não
- * armazenados. Guardá-los como campos permitiria escrever "céu vazio" e "erro" ao mesmo tempo, que
- * é precisamente a combinação que a tabela de precedência do ecrã existe para evitar.
+ * Depois da AD-011 compõe-se de duas partes: a [permission], exclusiva deste ecrã, e a
+ * [observation], partilhada com o detalhe. Os estados compostos — céu vazio, dados desatualizados,
+ * primeira carga — continuam **derivados**, não armazenados: guardá-los como campos permitiria
+ * escrever "céu vazio" e "erro" ao mesmo tempo, que é precisamente a combinação que a tabela de
+ * precedência do ecrã existe para evitar.
  */
 data class MainUiState(
     val permission: PermissionState = PermissionState.Unknown,
-    val phase: LoadPhase = LoadPhase.Idle,
-    /** Já ordenada por elevação decrescente pelo caso de uso. */
-    val flights: List<OverheadFlight> = emptyList(),
-    /** `null` enquanto nunca houve uma consulta bem sucedida. */
-    val lastUpdatedEpochSeconds: Long? = null,
-    /** `null` quando a última tentativa correu bem. */
-    val lastError: SkyError? = null,
+    val observation: SkyObservation = SkyObservation(),
 ) {
+    val phase: LoadPhase get() = observation.phase
+
+    /** Já ordenada por elevação decrescente pelo caso de uso. */
+    val flights: List<OverheadFlight> get() = observation.flights
+
+    /** `null` enquanto nunca houve uma consulta bem sucedida. */
+    val lastUpdatedEpochSeconds: Long? get() = observation.lastUpdatedEpochSeconds
+
+    /** `null` quando a última tentativa correu bem. */
+    val lastError: SkyError? get() = observation.lastError
+
     /** Consulta com sucesso e nenhuma aeronave a cumprir os critérios (FR-023). */
     val isSkyEmpty: Boolean
         get() = lastError == null && lastUpdatedEpochSeconds != null && flights.isEmpty()

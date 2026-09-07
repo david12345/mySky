@@ -272,7 +272,24 @@ corresponde ao céu real. Por medir, sem sinal de problema: a mediana do arranqu
 cobertura da tabela de operadores (SC-004) e a ausência de rede em segundo plano — ver os critérios
 de saída de `specs/001-sky-list/quickstart.md`.
 
-**Feature em curso:** `specs/002-flight-detail` — ecrã de detalhe de uma aeronave, que fecha o
-beco sem saída deixado pela 001 (hoje o toque numa linha abre um ecrã vazio). Especificação fechada
-(16/16 no checklist) e plano com artefactos de desenho completos, incluindo AD-011 e AD-012.
-Próximo passo: `/speckit-tasks`.
+**`002-flight-detail` implementada.** O toque numa linha da lista abre um ecrã com tudo o que a app
+sabe da aeronave, a atualizar-se sozinho e a dizer de forma explícita quando o avião sai do céu.
+171 testes unitários verdes, lint sem erros, APK de debug a gerar.
+
+O laço de atualização deixou de viver no `MainViewModel` e passou para a `SkySession` partilhada
+(AD-011): a contagem de subscritores soma os dois ecrãs, o que dá um só pedido por ciclo e os
+mesmos valores nos dois sítios sem mutex nem cache. A distinção entre "saiu do céu", "a atualização
+falhou" e "nunca foi observada" é uma redução pura no domínio (AD-012).
+
+Continuam por implementar, como esqueleto com `TODO(feature/...)`: `SettingsRepositoryImpl`,
+`SightingRepository`/Room, `LocationRepositoryImpl.locationUpdates`, widget, worker e notificações.
+O ecrã de definições continua a ser um beco sem saída — é o que resta dos dois que a 001 deixou.
+
+**Falta para dar a feature por fechada:** a validação manual de
+`specs/002-flight-detail/quickstart.md` (secções 5 a 7), num dispositivo. O passo que mais importa é
+o 7 da secção 5: com o modo de avião ligado, o ecrã **não** pode anunciar que a aeronave saiu do
+céu. E a contagem de pedidos no Network Inspector com o detalhe aberto tem de ser igual à da lista
+sozinha (SC-008).
+
+**Feature seguinte:** `003-settings` (desbloqueia o `SettingsRepositoryImpl`, que a AD-009 deixou
+por fazer, e fecha o segundo beco sem saída) ou `002-widget` como previsto na AD-003.

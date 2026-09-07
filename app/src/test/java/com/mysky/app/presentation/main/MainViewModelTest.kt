@@ -9,10 +9,16 @@ import com.mysky.app.domain.time.TimeProvider
 import com.mysky.app.domain.usecase.ObserveSkyUseCase
 import com.mysky.app.overheadFlight
 import com.mysky.app.aircraft
+import com.mysky.app.presentation.sky.LoadPhase
+import com.mysky.app.presentation.sky.skySession
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -25,17 +31,32 @@ class MainViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    /** Mesmo scheduler do `runTest`: sem isto o tempo virtual da sessão seria outro. */
+    private val testDispatcher = StandardTestDispatcher(mainDispatcherRule.scheduler)
+
     private val observeSky = mockk<ObserveSkyUseCase>()
     private val locationRepository = mockk<LocationRepository>(relaxed = true)
+
+    init {
+        // A sessão pergunta a permissão ao repositório uma vez por ciclo (AD-011), em vez de ser
+        // comandada pelo estado do ViewModel. Os testes que exercitam o laço têm de o dizer aqui;
+        // os que testam a ausência de permissão sobrepõem-se a isto explicitamente.
+        every { locationRepository.hasLocationPermission() } returns true
+    }
     private val timeProvider = TimeProvider { NOW_EPOCH_SECONDS }
 
     private val highFlight = overheadFlight(aircraft = aircraft(icao24 = "alto"), elevationDegrees = 80.0)
     private val lowFlight = overheadFlight(aircraft = aircraft(icao24 = "baixo"), elevationDegrees = 30.0)
 
-    private fun viewModel() = MainViewModel(observeSky, locationRepository, timeProvider)
+    private fun viewModel() = MainViewModel(
+        skySession(observeSky, locationRepository, testDispatcher, timeProvider),
+        locationRepository,
+    )
 
     @Test
     fun `estado inicial nao tem permissao nem trabalho em curso`() = runTest(mainDispatcherRule.testContext) {
+        every { locationRepository.hasLocationPermission() } returns false
+
         viewModel().uiState.test {
             val initial = awaitItem()
 
@@ -49,6 +70,7 @@ class MainViewModelTest {
 
     @Test
     fun `sem permissao nao se pede localizacao nem voos`() = runTest(mainDispatcherRule.testContext) {
+        every { locationRepository.hasLocationPermission() } returns false
         val viewModel = viewModel()
 
         viewModel.uiState.test {
@@ -80,7 +102,7 @@ class MainViewModelTest {
 
             viewModel.uiState.test {
                 awaitItem()
-                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                viewModel.onScreenVisible()
 
                 // Espera-se por condição e não por emissão: um StateFlow conflacia, e conceder a
                 // permissão e começar a localizar acontecem antes de o coletor correr uma vez.
@@ -104,7 +126,7 @@ class MainViewModelTest {
 
         viewModel.uiState.test {
             awaitItem()
-            viewModel.onPermissionResult(granted = true, canAskAgain = true)
+            viewModel.onScreenVisible()
 
             val loaded = awaitItemWhere { it.phase == LoadPhase.Idle && it.flights.isNotEmpty() }
 
@@ -123,13 +145,86 @@ class MainViewModelTest {
 
         viewModel.uiState.test {
             awaitItem()
-            viewModel.onPermissionResult(granted = true, canAskAgain = true)
+            viewModel.onScreenVisible()
 
             val loaded = awaitItemWhere { it.flights.isNotEmpty() }
 
             assertEquals(listOf("alto", "baixo"), loaded.flights.map { it.aircraft.icao24 })
         }
     }
+
+    @Test
+    fun `arranque com a permissao ja concedida faz um so pedido`() =
+        runTest(mainDispatcherRule.testContext) {
+            // A sessão encontra a permissão sozinha no primeiro ciclo. Se o ecrã a acordasse também
+            // ao reavaliar a permissão, todos os arranques pediriam os mesmos dados duas vezes —
+            // contra o orçamento da fonte, e sem nada no ecrã a denunciá-lo.
+            coEvery { locationRepository.getCurrentLocation() } returns LISBON
+            coEvery { observeSky(LISBON, any()) } returns Result.success(emptyList())
+            val viewModel = viewModel()
+
+            viewModel.uiState.test {
+                awaitItem()
+                viewModel.onScreenVisible()
+                awaitItemWhere { it.lastUpdatedEpochSeconds != null }
+                advanceTimeBy(10_000)
+                runCurrent()
+
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            coVerify(exactly = 1) { observeSky(LISBON, any()) }
+        }
+
+    @Test
+    fun `conceder no dialogo do sistema arranca o ciclo sem esperar pelo tique`() =
+        runTest(mainDispatcherRule.testContext) {
+            // O caminho da primeira concessão: a sessão já correu um ciclo e não fez nada por não
+            // haver permissão. Se ninguém a acordar, o utilizador que acabou de conceder fica meio
+            // minuto a olhar para o ecrã de rationale — contra o SC-001.
+            every { locationRepository.hasLocationPermission() } returns false
+            coEvery { locationRepository.getCurrentLocation() } returns LISBON
+            coEvery { observeSky(LISBON, any()) } returns Result.success(emptyList())
+            val viewModel = viewModel()
+
+            viewModel.uiState.test {
+                awaitItem()
+                runCurrent()
+                coVerify(exactly = 0) { observeSky(LISBON, any()) }
+
+                every { locationRepository.hasLocationPermission() } returns true
+                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                runCurrent()
+
+                // Sem avançar o relógio: tem de acontecer já.
+                coVerify(exactly = 1) { observeSky(LISBON, any()) }
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `reavaliar a permissao ao retomar o ecra tambem arranca o ciclo`() =
+        runTest(mainDispatcherRule.testContext) {
+            // O mesmo caminho, mas pelo efeito que reavalia a permissão ao retomar. Os dois
+            // disparam na mesma transição e sem ordem garantida entre si: qualquer um deles,
+            // sozinho, tem de chegar para acordar o laço.
+            every { locationRepository.hasLocationPermission() } returns false
+            coEvery { locationRepository.getCurrentLocation() } returns LISBON
+            coEvery { observeSky(LISBON, any()) } returns Result.success(emptyList())
+            val viewModel = viewModel()
+
+            viewModel.uiState.test {
+                awaitItem()
+                runCurrent()
+
+                every { locationRepository.hasLocationPermission() } returns true
+                viewModel.onScreenVisible()
+                runCurrent()
+
+                coVerify(exactly = 1) { observeSky(LISBON, any()) }
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 
     @Test
     fun `permissao concedida arranca o ciclo`() = runTest(mainDispatcherRule.testContext) {

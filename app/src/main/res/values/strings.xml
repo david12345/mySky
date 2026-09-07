@@ -66,4 +66,28 @@
     <string name="bearing_ono">ONO</string>
     <string name="bearing_no">NO</string>
     <string name="bearing_nno">NNO</string>
+    <!-- Ecrã de detalhe de um voo (002-flight-detail). -->
+    <string name="detail_title">Detalhe do voo</string>
+    <string name="detail_back">Voltar</string>
+    <string name="detail_section_identity">Identificação</string>
+    <string name="detail_section_flight">Voo</string>
+    <string name="detail_section_observer">A partir de onde estás</string>
+    <string name="detail_airline">Companhia</string>
+    <string name="detail_origin_country">País de registo</string>
+    <string name="detail_altitude_geometric">Altitude (GNSS)</string>
+    <string name="detail_altitude_barometric">Altitude (barométrica)</string>
+    <string name="detail_altitude_used">usada no cálculo da elevação</string>
+    <string name="detail_speed">Velocidade</string>
+    <string name="detail_heading">Rumo da aeronave</string>
+    <string name="detail_vertical_rate">Subida / descida</string>
+    <string name="detail_climbing">a subir %1$s m/s</string>
+    <string name="detail_descending">a descer %1$s m/s</string>
+    <string name="detail_level">nivelado</string>
+    <string name="detail_distance">Distância</string>
+    <string name="detail_bearing">Direção a olhar</string>
+    <string name="detail_elevation">Elevação</string>
+    <string name="detail_left_sky_title">Já não está no teu céu</string>
+    <string name="detail_left_sky_body">Estes são os últimos valores conhecidos, vistos %1$s. A aeronave já não cumpre os critérios do teu céu.</string>
+    <string name="detail_not_in_sky">Esta aeronave não está no teu céu neste momento.</string>
+    <string name="detail_no_aircraft">Não foi possível identificar a aeronave.</string>
 </resources>

@@ -10,10 +10,13 @@ import com.mysky.app.domain.repository.LocationRepository
 import com.mysky.app.domain.time.TimeProvider
 import com.mysky.app.domain.usecase.ObserveSkyUseCase
 import com.mysky.app.overheadFlight
+import com.mysky.app.presentation.sky.LoadPhase
+import com.mysky.app.presentation.sky.skySession
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -29,15 +32,24 @@ class MainViewModelStatesTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    /** Mesmo scheduler do `runTest`: sem isto o tempo virtual da sessão seria outro. */
+    private val testDispatcher = StandardTestDispatcher(mainDispatcherRule.scheduler)
+
     private val observeSky = mockk<ObserveSkyUseCase>()
     private val locationRepository = mockk<LocationRepository>(relaxed = true)
+
+    init {
+        // A sessão pergunta a permissão ao repositório uma vez por ciclo (AD-011), em vez de ser
+        // comandada pelo estado do ViewModel. Os testes que exercitam o laço têm de o dizer aqui;
+        // os que testam a ausência de permissão sobrepõem-se a isto explicitamente.
+        every { locationRepository.hasLocationPermission() } returns true
+    }
 
     private val flight = overheadFlight(aircraft = aircraft(icao24 = "aaa111"))
 
     private fun viewModel() = MainViewModel(
-        observeSky,
+        skySession(observeSky, locationRepository, testDispatcher),
         locationRepository,
-        TimeProvider { NOW_EPOCH_SECONDS },
     )
 
     @Test
@@ -53,7 +65,7 @@ class MainViewModelStatesTest {
 
             viewModel.uiState.test {
                 awaitItem()
-                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                viewModel.onScreenVisible()
                 awaitItemWhere { it.lastUpdatedEpochSeconds != null }
 
                 advanceTimeBy(30_001)
@@ -80,7 +92,7 @@ class MainViewModelStatesTest {
 
         viewModel.uiState.test {
             awaitItem()
-            viewModel.onPermissionResult(granted = true, canAskAgain = true)
+            viewModel.onScreenVisible()
             awaitItemWhere { it.lastError != null }
 
             advanceTimeBy(30_001)
@@ -104,7 +116,7 @@ class MainViewModelStatesTest {
 
             viewModel.uiState.test {
                 awaitItem()
-                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                viewModel.onScreenVisible()
                 val state = awaitItemWhere { it.lastError != null }
 
                 assertEquals(SkyError.LocationUnavailable, state.lastError)
@@ -130,7 +142,7 @@ class MainViewModelStatesTest {
 
             viewModel.uiState.test {
                 awaitItem()
-                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                viewModel.onScreenVisible()
                 awaitItemWhere { it.lastError is SkyError.RateLimited }
                 assertEquals(1, calls.get())
 
@@ -160,7 +172,7 @@ class MainViewModelStatesTest {
 
             viewModel.uiState.test {
                 awaitItem()
-                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                viewModel.onScreenVisible()
                 awaitItemWhere { it.lastError != null }
 
                 advanceTimeBy(30_001)
@@ -181,7 +193,7 @@ class MainViewModelStatesTest {
 
             viewModel.uiState.test {
                 awaitItem()
-                viewModel.onPermissionResult(granted = true, canAskAgain = true)
+                viewModel.onScreenVisible()
                 awaitItemWhere { it.permission == PermissionState.Granted }
 
                 // O utilizador foi às definições do sistema e revogou a permissão.
@@ -237,7 +249,7 @@ class MainViewModelStatesTest {
 
         viewModel.uiState.test {
             awaitItem()
-            viewModel.onPermissionResult(granted = true, canAskAgain = true)
+            viewModel.onScreenVisible()
 
             assertEquals(LoadPhase.Idle, awaitItemWhere { it.lastError != null }.phase)
 

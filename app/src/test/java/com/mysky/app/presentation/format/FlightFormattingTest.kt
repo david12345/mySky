@@ -1,8 +1,5 @@
-package com.mysky.app.presentation.main
+package com.mysky.app.presentation.format
 
-import com.mysky.app.presentation.main.format.CompassPoint
-import com.mysky.app.presentation.main.format.FlightFormatting
-import com.mysky.app.presentation.main.format.Freshness
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -106,5 +103,51 @@ class FlightFormattingTest {
     fun `instante no futuro nao produz idade negativa`() {
         // Acontece quando o relógio do dispositivo está atrás do da fonte.
         assertEquals(Freshness.JustNow, FlightFormatting.freshnessOf(90L, 100L))
+    }
+
+    // --- Razão de subida e descida (D4) ---------------------------------------------------------
+
+    @Test
+    fun `subida acima do limiar e apresentada como subida`() {
+        assertEquals(
+            VerticalMovement.Climbing(8.0),
+            FlightFormatting.verticalMovementOf(8.0),
+        )
+    }
+
+    @Test
+    fun `descida chega sem sinal porque o sentido esta na variante`() {
+        // O número que o utilizador lê nunca pode aparecer negativo: "a descer -5 m/s" obrigá-lo-ia
+        // a interpretar duas negações.
+        assertEquals(
+            VerticalMovement.Descending(5.0),
+            FlightFormatting.verticalMovementOf(-5.0),
+        )
+    }
+
+    @Test
+    fun `uma variacao negligenciavel e voo nivelado nos dois sentidos`() {
+        // 0,4 m/s são 24 metros num minuto: dizer "a subir" seria verdade aritmética e mentira
+        // prática.
+        assertEquals(VerticalMovement.Level, FlightFormatting.verticalMovementOf(0.4))
+        assertEquals(VerticalMovement.Level, FlightFormatting.verticalMovementOf(-0.4))
+        assertEquals(VerticalMovement.Level, FlightFormatting.verticalMovementOf(0.0))
+    }
+
+    @Test
+    fun `o limiar de nivelado esta do lado do movimento`() {
+        // Exatamente no limiar conta como movimento: é a fronteira que o limiar define.
+        assertEquals(VerticalMovement.Climbing(0.5), FlightFormatting.verticalMovementOf(0.5))
+        assertEquals(VerticalMovement.Descending(0.5), FlightFormatting.verticalMovementOf(-0.5))
+    }
+
+    // --- Rumo da aeronave contra direção a olhar (D6) --------------------------------------------
+
+    @Test
+    fun `o rumo da aeronave nao e suprimido no zenite`() {
+        // A direção **a olhar** perde significado no zénite; o rumo da aeronave não — ela continua
+        // a ir para algum lado. Suprimir os dois por simetria aparente apagaria informação correta.
+        assertNull(FlightFormatting.compassPointOrNull(bearingDegrees = 45.0, elevationDegrees = 89.0))
+        assertEquals(CompassPoint.NE, FlightFormatting.compassPointOf(45.0))
     }
 }

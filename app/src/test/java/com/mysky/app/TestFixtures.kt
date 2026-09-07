@@ -4,6 +4,9 @@ import com.mysky.app.domain.model.Aircraft
 import com.mysky.app.domain.model.Airline
 import com.mysky.app.domain.model.GeoPosition
 import com.mysky.app.domain.model.OverheadFlight
+import com.mysky.app.domain.model.SkyError
+import com.mysky.app.presentation.sky.LoadPhase
+import com.mysky.app.presentation.sky.SkyObservation
 
 /**
  * Construtores de teste partilhados.
@@ -68,3 +71,30 @@ fun northOf(from: GeoPosition = LISBON, distanceMeters: Double): GeoPosition = G
     latitudeDegrees = from.latitudeDegrees + Math.toDegrees(distanceMeters / 6_371_008.8),
     longitudeDegrees = from.longitudeDegrees,
 )
+
+/**
+ * Observação do céu com valores do caminho feliz: um ciclo concluído com sucesso, sem erro.
+ *
+ * Os testes desta feature descrevem-se pelo que desviam daqui — um erro, uma lista vazia, um
+ * `lastUpdatedEpochSeconds` nulo — em vez de montarem a observação inteira de cada vez.
+ */
+fun skyObservation(
+    phase: LoadPhase = LoadPhase.Idle,
+    flights: List<OverheadFlight> = emptyList(),
+    lastUpdatedEpochSeconds: Long? = NOW_EPOCH_SECONDS,
+    lastError: SkyError? = null,
+): SkyObservation = SkyObservation(
+    phase = phase,
+    flights = flights,
+    lastUpdatedEpochSeconds = lastUpdatedEpochSeconds,
+    lastError = lastError,
+)
+
+/**
+ * Voos com os [icao24] pedidos, todos válidos e distintos.
+ *
+ * Existe porque os testes de presença só se interessam por **que** aeronaves estão na observação,
+ * nunca pela geometria de cada uma.
+ */
+fun flightsWith(vararg icao24: String): List<OverheadFlight> =
+    icao24.map { id -> overheadFlight(aircraft = aircraft(icao24 = id)) }
