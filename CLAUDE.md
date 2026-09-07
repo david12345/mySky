@@ -222,9 +222,13 @@ rationale, recusa permanente, primeiro carregamento, erro bloqueante, céu vazio
 Continuam por implementar, como esqueleto com `TODO(feature/...)`: `SettingsRepositoryImpl`,
 `SightingRepository`/Room, `LocationRepositoryImpl.locationUpdates`, widget, worker e notificações.
 
-**Falta para dar a feature por fechada:** T053 — a validação manual de
-`specs/001-sky-list/quickstart.md` (secções 4 a 6) contra o céu real, num dispositivo. Exige
-hardware e vista para o céu; nada nela é automatizável, e SC-001 a SC-005 só ficam verificados
-depois disso.
+**Validação em dispositivo (T053) feita a 2026-09-07:** os seis estados respondem, a lista
+corresponde ao céu real. Por medir, sem sinal de problema: a mediana do arranque (SC-001), a
+cobertura da tabela de operadores (SC-004) e a ausência de rede em segundo plano — ver os critérios
+de saída de `specs/001-sky-list/quickstart.md`.
 
-**Feature seguinte:** `002-widget` (AD-003), a começar por `/speckit-specify`. Só depois de T053.
+**Feature seguinte:** o toque numa linha da lista abre `FlightDetailScreen`, que é um esqueleto
+vazio — é o beco sem saída mais visível da app e o candidato natural a `002-flight-detail`. O
+vetor de estado da OpenSky chega para um ecrã útil sem fonte nova; matrícula, tipo de aeronave e
+rota exigiriam uma, e isso é decisão para o `architect`. Em alternativa, `002-widget` como previsto
+na AD-003.

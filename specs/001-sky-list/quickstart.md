@@ -105,11 +105,19 @@ de SC-003 e o erro mais provável de todo o filtro.
 
 ## Critérios de saída
 
-- [ ] `./gradlew :app:testDebugUnitTest` verde
-- [ ] `./gradlew :app:lintDebug` sem erros
-- [ ] Os seis estados da secção 4 verificados manualmente
-- [ ] Mediana do tempo até à primeira lista abaixo de 5 s (SC-001)
-- [ ] Pelo menos 95 em 100 voos comerciais com operador identificado (SC-004)
-- [ ] Nenhuma atividade de rede após 10 s em segundo plano
-- [ ] Verificação contra o céu real feita pelo menos uma vez
-- [ ] Subagente `reviewer` executado e achados tratados (exigência da constituição)
+Validação em dispositivo feita a 2026-09-07.
+
+- [X] `./gradlew :app:testDebugUnitTest` verde — 131 testes
+- [X] `./gradlew :app:lintDebug` sem erros — 26 avisos, 0 erros
+- [X] Os seis estados da secção 4 verificados manualmente
+- [X] Verificação contra o céu real feita — a lista corresponde ao que se vê
+- [X] Subagente `reviewer` executado e achados tratados (T054)
+- [ ] Mediana do tempo até à primeira lista abaixo de 5 s (SC-001) — **não cronometrado**
+- [ ] Pelo menos 95 em 100 voos comerciais com operador identificado (SC-004) — **não contado**
+- [ ] Nenhuma atividade de rede após 10 s em segundo plano — **não instrumentado**
+- [ ] Ausência de aeronaves em solo confirmada junto a um aeroporto (SC-003) — **não confirmada
+      nesse cenário**; o filtro está coberto por teste unitário
+
+Os quatro por marcar não revelaram problema — não foram medidos. SC-001 e SC-004 são limiares
+numéricos: ficam por verificar até alguém os cronometrar e contar. Se a app vier a parecer lenta a
+arrancar, ou se faltarem nomes de companhia com frequência, é aqui que a dívida está.

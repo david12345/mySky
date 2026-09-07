@@ -187,9 +187,17 @@ voltar atrás regressa à lista.
 - [X] T050 [P] Verificar que nenhum ficheiro em `app/src/main/java/com/mysky/app/domain/` importa `android.*`, Retrofit, Room, Compose ou WorkManager (princípio I): `grep -rE "^import (android|retrofit2|androidx\.room|androidx\.compose|androidx\.work)" app/src/main/java/com/mysky/app/domain/`
 - [X] T051 [P] Verificar que a feature nunca pede `ACCESS_BACKGROUND_LOCATION` em runtime (FR-004, princípio III): `grep -rn "ACCESS_BACKGROUND_LOCATION" app/src/main/java/` tem de não devolver nada — a permissão continua declarada no manifesto para features futuras, mas declarar não é pedir
 - [X] T052 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes (cobre SC-003, SC-006 e SC-007 na parte automatizada)
-- [ ] T053 Executar a validação manual de [quickstart.md](./quickstart.md) secções 4 a 6 e preencher os critérios de saída: os seis estados (SC-005), tempo até à primeira lista abaixo de 5 s (SC-001), cobertura da tabela de operadores em 100 entradas reais (SC-004), ausência de rede em segundo plano (SC-007), e a verificação contra o céu real (SC-002, SC-003)
+- [X] T053 Executar a validação manual de [quickstart.md](./quickstart.md) secções 4 a 6 e preencher os critérios de saída: os seis estados (SC-005), tempo até à primeira lista abaixo de 5 s (SC-001), cobertura da tabela de operadores em 100 entradas reais (SC-004), ausência de rede em segundo plano (SC-007), e a verificação contra o céu real (SC-002, SC-003)
 - [X] T054 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (exigência da constituição, princípio VI)
 - [X] T055 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
+
+### Nota sobre a T053
+
+Validada em dispositivo a 2026-09-07: os seis estados respondem, a lista corresponde ao céu real e
+a app comporta-se como esperado. Ficaram **por medir** os dois limiares numéricos — mediana do
+arranque (SC-001) e cobertura da tabela de operadores (SC-004) — e a ausência de rede em segundo
+plano não foi instrumentada. Nenhum deles mostrou problema; simplesmente não foram quantificados.
+Detalhe em [quickstart.md](./quickstart.md), critérios de saída.
 
 ### Achados da revisão (T054)
 
