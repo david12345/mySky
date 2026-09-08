@@ -59,6 +59,14 @@ android {
         buildConfig = true
     }
 
+    androidResources {
+        // A tabela de rotas tem de ficar **por comprimir** dentro do APK. A app lê-a por
+        // deslocamento direto, com pesquisa binária, sem a carregar para memória (AD-013); um
+        // asset comprimido só é legível de forma sequencial, o que obrigaria a descomprimir 7,6 MB
+        // para o heap a cada arranque — e nada daria erro. O `noCompress` é por extensão.
+        noCompress += "bin"
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

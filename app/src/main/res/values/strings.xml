@@ -90,4 +90,21 @@
     <string name="detail_left_sky_body">Estes são os últimos valores conhecidos, vistos %1$s. A aeronave já não cumpre os critérios do teu céu.</string>
     <string name="detail_not_in_sky">Esta aeronave não está no teu céu neste momento.</string>
     <string name="detail_no_aircraft">Não foi possível identificar a aeronave.</string>
+    <!-- Rota do voo (003-flight-route). -->
+    <string name="detail_route">Rota</string>
+    <string name="route_pair">%1$s → %2$s</string>
+
+    <!-- Tabela de rotas, no ecrã de definições. -->
+    <string name="settings_title">Definições</string>
+    <string name="settings_routes_title">Tabela de rotas</string>
+    <string name="settings_routes_generated_at">Dados de %1$s</string>
+    <string name="settings_routes_count">%1$s rotas</string>
+    <string name="settings_routes_unknown">Sem informação sobre a tabela em uso</string>
+    <string name="settings_routes_update">Atualizar</string>
+    <string name="settings_routes_updating">A atualizar…</string>
+    <string name="settings_routes_updated">Atualizada. %1$s rotas, dados de %2$s.</string>
+    <string name="settings_routes_error_no_connection">Sem ligação à Internet. A tabela em uso mantém-se.</string>
+    <string name="settings_routes_error_unreachable">Não foi possível chegar ao servidor. A tabela em uso mantém-se.</string>
+    <string name="settings_routes_error_invalid">Os dados recebidos não são válidos. A tabela em uso mantém-se.</string>
+    <string name="settings_routes_error_unexpected">A atualização não foi concluída. A tabela em uso mantém-se.</string>
 </resources>
