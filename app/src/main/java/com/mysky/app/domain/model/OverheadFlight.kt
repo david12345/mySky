@@ -21,6 +21,15 @@ data class OverheadFlight(
      * (AD-007). Por isso a omissão é `null` — um voo detetado mas ainda não enriquecido é válido.
      */
     val airline: Airline? = null,
+    /**
+     * Rota agendada do número de voo, quando o indicativo a identifica.
+     *
+     * Preenchida no mesmo segundo passo que [airline], em `ObserveSkyUseCase`. A **ausência é o
+     * caso normal**, não a exceção: a maioria dos indicativos que passa no céu de um observador não
+     * tem rota conhecida — aviação privada, militar, carga fora de rotas regulares. Nunca esconde a
+     * aeronave nem impede a sua apresentação.
+     */
+    val route: Route? = null,
 ) {
     /**
      * Critério de ordenação: quanto mais alto no céu, mais "relevante" para o utilizador

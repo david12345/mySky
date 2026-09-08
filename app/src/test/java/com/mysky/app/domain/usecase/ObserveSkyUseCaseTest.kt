@@ -10,7 +10,9 @@ import com.mysky.app.domain.model.BoundingBox
 import com.mysky.app.domain.model.GeoPosition
 import com.mysky.app.domain.model.OverheadCriteria
 import com.mysky.app.domain.model.SkyError
+import com.mysky.app.domain.model.Route
 import com.mysky.app.domain.repository.AirlineDirectory
+import com.mysky.app.domain.repository.RouteDirectory
 import com.mysky.app.domain.repository.FlightRepository
 import com.mysky.app.domain.time.TimeProvider
 import io.mockk.coEvery
@@ -29,6 +31,7 @@ class ObserveSkyUseCaseTest {
 
     private val flightRepository = mockk<FlightRepository>()
     private val airlineDirectory = mockk<AirlineDirectory>()
+    private val routeDirectory = mockk<RouteDirectory>()
     private val geoCalculator = GeoCalculator()
 
     /** O tempo entra por abstração: nenhum teste lê o relógio do sistema (princípio I). */
@@ -39,6 +42,7 @@ class ObserveSkyUseCaseTest {
         geoCalculator = geoCalculator,
         detectOverheadFlights = DetectOverheadFlightsUseCase(geoCalculator),
         airlineDirectory = airlineDirectory,
+        routeDirectory = routeDirectory,
         timeProvider = timeProvider,
     )
 
@@ -64,6 +68,7 @@ class ObserveSkyUseCaseTest {
 
     private fun directoryKnowsNothing() {
         coEvery { airlineDirectory.findByCallsign(any()) } returns null
+        coEvery { routeDirectory.findByCallsign(any()) } returns null
     }
 
     @Test
@@ -87,6 +92,7 @@ class ObserveSkyUseCaseTest {
         repositoryReturns(overhead("aaa111", callsign = "TAP1234", altitudeMeters = 10_000.0))
         coEvery { airlineDirectory.findByCallsign("TAP1234") } returns
             Airline("TAP", "TAP Air Portugal")
+        coEvery { routeDirectory.findByCallsign(any()) } returns null
 
         val flight = useCase(LISBON).getOrThrow().single()
 
@@ -108,6 +114,7 @@ class ObserveSkyUseCaseTest {
     fun `falha do diretorio de operadores nao falha a operacao`() = runTest {
         repositoryReturns(overhead("aaa111", altitudeMeters = 10_000.0))
         coEvery { airlineDirectory.findByCallsign(any()) } throws IllegalStateException("tabela ilegível")
+        coEvery { routeDirectory.findByCallsign(any()) } returns null
 
         val result = useCase(LISBON)
 
@@ -234,6 +241,7 @@ class ObserveSkyUseCaseTest {
             geoCalculator = geoCalculator,
             detectOverheadFlights = detector,
             airlineDirectory = airlineDirectory,
+            routeDirectory = routeDirectory,
             timeProvider = timeProvider,
         )
         repositoryReturns(overhead("aaa111", altitudeMeters = 10_000.0))
@@ -255,5 +263,55 @@ class ObserveSkyUseCaseTest {
         }
 
         assertTrue(propagated)
+    }
+
+    // --- A rota (003-flight-route) ---------------------------------------------------------------
+
+    @Test
+    fun `a rota do indicativo chega ao voo`() = runTest {
+        repositoryReturns(overhead("aaa111", callsign = "TAP1234", altitudeMeters = 10_000.0))
+        coEvery { airlineDirectory.findByCallsign(any()) } returns null
+        coEvery { routeDirectory.findByCallsign("TAP1234") } returns Route("LIS", "CDG")
+
+        val flight = useCase(LISBON).getOrThrow().single()
+
+        assertEquals(Route("LIS", "CDG"), flight.route)
+    }
+
+    @Test
+    fun `indicativo sem rota conhecida deixa a aeronave na lista sem rota`() = runTest {
+        repositoryReturns(overhead("aaa111", callsign = "XXX9999", altitudeMeters = 10_000.0))
+        directoryKnowsNothing()
+
+        val flight = useCase(LISBON).getOrThrow().single()
+
+        assertNull(flight.route)
+        assertEquals("aaa111", flight.aircraft.icao24)
+    }
+
+    @Test
+    fun `falha do diretorio de rotas nao derruba a lista`() = runTest {
+        // A rota é decoração. Esconder o céu inteiro por causa de duas siglas seria trocar uma
+        // ausência aceitável por uma falha visível.
+        repositoryReturns(overhead("aaa111", altitudeMeters = 10_000.0))
+        coEvery { airlineDirectory.findByCallsign(any()) } returns null
+        coEvery { routeDirectory.findByCallsign(any()) } throws IllegalStateException("ficheiro ilegível")
+
+        val result = useCase(LISBON)
+
+        assertTrue(result.isSuccess)
+        assertNull(result.getOrThrow().single().route)
+    }
+
+    @Test
+    fun `operador e rota convivem no mesmo voo`() = runTest {
+        repositoryReturns(overhead("aaa111", callsign = "TAP1234", altitudeMeters = 10_000.0))
+        coEvery { airlineDirectory.findByCallsign("TAP1234") } returns Airline("TAP", "TAP Air Portugal")
+        coEvery { routeDirectory.findByCallsign("TAP1234") } returns Route("LIS", "CDG")
+
+        val flight = useCase(LISBON).getOrThrow().single()
+
+        assertEquals("TAP Air Portugal", flight.airline?.name)
+        assertEquals(Route("LIS", "CDG"), flight.route)
     }
 }

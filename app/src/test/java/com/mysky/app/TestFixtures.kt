@@ -4,6 +4,7 @@ import com.mysky.app.domain.model.Aircraft
 import com.mysky.app.domain.model.Airline
 import com.mysky.app.domain.model.GeoPosition
 import com.mysky.app.domain.model.OverheadFlight
+import com.mysky.app.domain.model.Route
 import com.mysky.app.domain.model.SkyError
 import com.mysky.app.presentation.sky.LoadPhase
 import com.mysky.app.presentation.sky.SkyObservation
@@ -55,12 +56,14 @@ fun overheadFlight(
     bearingDegrees: Double = 45.0,
     elevationDegrees: Double = 60.0,
     airline: Airline? = null,
+    route: Route? = null,
 ): OverheadFlight = OverheadFlight(
     aircraft = aircraft,
     horizontalDistanceMeters = horizontalDistanceMeters,
     bearingDegrees = bearingDegrees,
     elevationDegrees = elevationDegrees,
     airline = airline,
+    route = route,
 )
 
 /**

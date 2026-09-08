@@ -34,6 +34,7 @@ import com.mysky.app.R
 import com.mysky.app.domain.model.OverheadFlight
 import com.mysky.app.presentation.format.CompassPoint
 import com.mysky.app.presentation.format.FlightFormatting
+import com.mysky.app.presentation.format.RouteFormatting
 import com.mysky.app.presentation.format.VerticalMovement
 import com.mysky.app.presentation.format.freshnessText
 import com.mysky.app.presentation.format.messageRes
@@ -134,6 +135,14 @@ private fun FlightDetail(
 
         Section(stringResource(R.string.detail_section_identity))
         flight.airline?.let { Field(stringResource(R.string.detail_airline), it.name) }
+        // Sem hora, sem estado, sem palavra que a dê por confirmada (FR-009): é a rota agendada do
+        // número de voo, e o ecrã não pode sugerir que segue o voo de hoje.
+        RouteFormatting.pairOrNull(flight.route)?.let { (origin, destination) ->
+            Field(
+                label = stringResource(R.string.detail_route),
+                value = stringResource(R.string.route_pair, origin, destination),
+            )
+        }
         flight.aircraft.originCountry?.let {
             Field(stringResource(R.string.detail_origin_country), it)
         }

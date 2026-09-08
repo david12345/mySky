@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.mysky.app.R
 import com.mysky.app.domain.model.OverheadFlight
 import com.mysky.app.presentation.format.FlightFormatting
+import com.mysky.app.presentation.format.RouteFormatting
 
 /**
  * Uma aeronave na lista.
@@ -60,6 +61,17 @@ fun FlightRow(
         // Operador desconhecido não deixa linha em branco: simplesmente não há segunda linha.
         flight.airline?.let { airline ->
             Text(text = airline.name, style = MaterialTheme.typography.bodyMedium)
+        }
+
+        // A rota é opcional e desaparece por completo quando não é conhecida — sem espaço
+        // reservado, sem travessão, sem interrogação. É o mesmo tratamento da companhia, e a
+        // maioria dos indicativos que passa no céu não terá rota (FR-005).
+        RouteFormatting.pairOrNull(flight.route)?.let { (origin, destination) ->
+            Text(
+                text = stringResource(R.string.route_pair, origin, destination),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         Text(

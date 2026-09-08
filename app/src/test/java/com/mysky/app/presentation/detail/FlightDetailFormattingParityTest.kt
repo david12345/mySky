@@ -3,8 +3,10 @@ package com.mysky.app.presentation.detail
 import com.mysky.app.LISBON
 import com.mysky.app.aircraft
 import com.mysky.app.domain.model.Aircraft
+import com.mysky.app.domain.model.Route
 import com.mysky.app.overheadFlight
 import com.mysky.app.presentation.format.FlightFormatting
+import com.mysky.app.presentation.format.RouteFormatting
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -59,6 +61,18 @@ class FlightDetailFormattingParityTest {
         assertEquals("12,3", FlightFormatting.distanceKm(flight.horizontalDistanceMeters, locale))
         assertEquals("839", FlightFormatting.speedKmh(flight.aircraft.groundSpeedMetersPerSecond!!, locale))
         assertEquals("62", FlightFormatting.elevationDegrees(flight.elevationDegrees, locale))
+    }
+
+    @Test
+    fun `a rota e o mesmo par nos dois ecras, ou ausente nos dois`() {
+        // FR-002 e SC-003: os dois ecrãs leem o mesmo campo pela mesma função. Se um deles
+        // compusesse o par à sua maneira, a divergência apareceria como um separador ou uma ordem
+        // diferentes — indistinguível de um erro de dados para quem olha.
+        val comRota = overheadFlight(route = Route("LIS", "CDG"))
+        val semRota = overheadFlight(route = null)
+
+        assertEquals("LIS" to "CDG", RouteFormatting.pairOrNull(comRota.route))
+        assertEquals(null, RouteFormatting.pairOrNull(semRota.route))
     }
 
     @Test

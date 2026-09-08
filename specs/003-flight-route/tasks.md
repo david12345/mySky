@@ -74,14 +74,14 @@ legível por deslocamento.
 **Independent Test**: com a lista preenchida num local com tráfego comercial, verificar que os voos
 de linha mostram as duas siglas e que o detalhe da mesma aeronave mostra exatamente as mesmas.
 
-- [ ] T016 [P] [US1] Acrescentar a `app/src/test/java/com/mysky/app/domain/usecase/ObserveSkyUseCaseTest.kt` os testes do enriquecimento: rota conhecida chega ao `OverheadFlight`, indicativo desconhecido deixa `route` a `null` sem falhar a operação, e uma falha do diretório de rotas não derruba a lista
-- [ ] T017 [P] [US1] Escrever `app/src/test/java/com/mysky/app/presentation/format/RouteFormattingTest.kt`: o par formata-se com o sentido inequívoco, e uma rota ausente não produz texto nenhum
-- [ ] T018 [US1] Acrescentar `route: Route? = null` a `app/src/main/java/com/mysky/app/domain/model/OverheadFlight.kt`, com KDoc a dizer que a ausência é o caso normal
-- [ ] T019 [US1] Criar `app/src/main/java/com/mysky/app/presentation/format/RouteFormatting.kt`, no pacote partilhado pelos dois ecrãs — a mesma razão de D3 da feature anterior: dois formatadores divergiriam no primeiro detalhe e ninguém daria por isso
-- [ ] T020 [US1] Ligar o diretório de rotas ao `app/src/main/java/com/mysky/app/domain/usecase/ObserveSkyUseCase.kt`, resolvendo **operador e rota em concorrência**, e as aeronaves entre si também (AD-015). Encadear duas pesquisas de disco por aeronave passa despercebido em teste e aparece como atraso no dispositivo
-- [ ] T021 [US1] Apresentar a rota em `app/src/main/java/com/mysky/app/presentation/main/FlightRow.kt`, omitida por completo quando `null`, sem espaço reservado
-- [ ] T022 [US1] Apresentar a rota em `app/src/main/java/com/mysky/app/presentation/detail/FlightDetailScreen.kt`, na secção de identificação. **Sem hora, estado ou qualquer palavra que a dê por confirmada** (FR-009): a rota é a agendada do número de voo, e o ecrã não pode sugerir que segue o voo em curso
-- [ ] T023 [US1] Escrever em `app/src/test/java/com/mysky/app/presentation/detail/FlightDetailFormattingParityTest.kt` o caso da rota: lista e detalhe produzem o mesmo texto para o mesmo voo (FR-002, SC-003)
+- [X] T016 [P] [US1] Acrescentar a `app/src/test/java/com/mysky/app/domain/usecase/ObserveSkyUseCaseTest.kt` os testes do enriquecimento: rota conhecida chega ao `OverheadFlight`, indicativo desconhecido deixa `route` a `null` sem falhar a operação, e uma falha do diretório de rotas não derruba a lista
+- [X] T017 [P] [US1] Escrever `app/src/test/java/com/mysky/app/presentation/format/RouteFormattingTest.kt`: o par formata-se com o sentido inequívoco, e uma rota ausente não produz texto nenhum
+- [X] T018 [US1] Acrescentar `route: Route? = null` a `app/src/main/java/com/mysky/app/domain/model/OverheadFlight.kt`, com KDoc a dizer que a ausência é o caso normal
+- [X] T019 [US1] Criar `app/src/main/java/com/mysky/app/presentation/format/RouteFormatting.kt`, no pacote partilhado pelos dois ecrãs — a mesma razão de D3 da feature anterior: dois formatadores divergiriam no primeiro detalhe e ninguém daria por isso
+- [X] T020 [US1] Ligar o diretório de rotas ao `app/src/main/java/com/mysky/app/domain/usecase/ObserveSkyUseCase.kt`, resolvendo **operador e rota em concorrência**, e as aeronaves entre si também (AD-015). Encadear duas pesquisas de disco por aeronave passa despercebido em teste e aparece como atraso no dispositivo
+- [X] T021 [US1] Apresentar a rota em `app/src/main/java/com/mysky/app/presentation/main/FlightRow.kt`, omitida por completo quando `null`, sem espaço reservado
+- [X] T022 [US1] Apresentar a rota em `app/src/main/java/com/mysky/app/presentation/detail/FlightDetailScreen.kt`, na secção de identificação. **Sem hora, estado ou qualquer palavra que a dê por confirmada** (FR-009): a rota é a agendada do número de voo, e o ecrã não pode sugerir que segue o voo em curso
+- [X] T023 [US1] Escrever em `app/src/test/java/com/mysky/app/presentation/detail/FlightDetailFormattingParityTest.kt` o caso da rota: lista e detalhe produzem o mesmo texto para o mesmo voo (FR-002, SC-003)
 
 **Checkpoint**: a feature é visível e útil.
 
@@ -94,10 +94,10 @@ de linha mostram as duas siglas e que o detalhe da mesma aeronave mostra exatame
 **Independent Test**: alimentar a app com indicativos ausentes da tabela e verificar que nenhuma
 sigla aparece — em vez de aparecer a rota de um indicativo vizinho.
 
-- [ ] T024 [P] [US2] Escrever em `app/src/test/java/com/mysky/app/data/local/FileRouteDirectoryTest.kt` o teste da invariante 2: um indicativo ausente da tabela devolve `null`, **nunca a rota do vizinho**. Numa pesquisa binária, um erro de comparação não devolve "não encontrado" — devolve a rota real de outro voo, com o mesmo ar de certeza que a correta. Cobrir chaves imediatamente antes do primeiro registo, imediatamente depois do último, e entre dois registos consecutivos
-- [ ] T025 [P] [US2] Escrever `app/src/test/java/com/mysky/app/data/local/RouteKeyParityTest.kt`: gerar chaves com a mesma normalização que o script usa e confirmar que `Route.callsignKeyOf` as encontra. Uma divergência aqui produz uma tabela inteira de rotas que nunca são encontradas, **sem erro em lado nenhum**
-- [ ] T026 [P] [US2] Acrescentar a `FileRouteDirectoryTest.kt` os casos de ausência legítima: indicativo nulo ou vazio, matrícula de aviação privada (`CS-DHA`, `N123AB`), indicativo com espaços e em minúsculas a encontrar a mesma rota
-- [ ] T027 [US2] Acrescentar a `FileRouteDirectoryTest.kt` a degradação: ficheiro ausente, truncado, com assinatura errada e com versão desconhecida produzem diretório vazio e a lista continua a funcionar sem rotas (FR-014)
+- [X] T024 [P] [US2] Escrever em `app/src/test/java/com/mysky/app/data/local/FileRouteDirectoryTest.kt` o teste da invariante 2: um indicativo ausente da tabela devolve `null`, **nunca a rota do vizinho**. Numa pesquisa binária, um erro de comparação não devolve "não encontrado" — devolve a rota real de outro voo, com o mesmo ar de certeza que a correta. Cobrir chaves imediatamente antes do primeiro registo, imediatamente depois do último, e entre dois registos consecutivos
+- [X] T025 [P] [US2] *(feito em `RouteTableCoverageTest.kt`, contra a tabela real de 584 832 rotas em vez de chaves sintéticas — um teste sobre uma tabela inventada teria as duas pontas iguais e não provaria nada)* Gerar chaves com a mesma normalização que o script usa e confirmar que `Route.callsignKeyOf` as encontra. Uma divergência aqui produz uma tabela inteira de rotas que nunca são encontradas, **sem erro em lado nenhum**
+- [X] T026 [P] [US2] Acrescentar a `FileRouteDirectoryTest.kt` os casos de ausência legítima: indicativo nulo ou vazio, matrícula de aviação privada (`CS-DHA`, `N123AB`), indicativo com espaços e em minúsculas a encontrar a mesma rota
+- [X] T027 [US2] Acrescentar a `FileRouteDirectoryTest.kt` a degradação: ficheiro ausente, truncado, com assinatura errada e com versão desconhecida produzem diretório vazio e a lista continua a funcionar sem rotas (FR-014)
 
 **Checkpoint**: a app cala-se quando não sabe, em vez de inventar.
 
@@ -110,8 +110,8 @@ sigla aparece — em vez de aparecer a rota de um indicativo vizinho.
 **Independent Test**: comparar pedidos ao serviço de voos e tempo até à primeira lista, antes e
 depois da feature, no mesmo local e à mesma hora.
 
-- [ ] T028 [P] [US3] Escrever em `app/src/test/java/com/mysky/app/domain/usecase/ObserveSkyEnrichmentConcurrencyTest.kt` o teste de que operador e rota de várias aeronaves se resolvem em concorrência e não em cadeia: com resoluções travadas, o tempo total tem de ser o da mais lenta e não a soma
-- [ ] T029 [US3] Gate do armazenamento: `unzip -lv app/build/outputs/apk/debug/app-debug.apk | grep routes.bin` tem de mostrar **`Stored`**, nunca `Defl`. É o gate mais importante da feature e o único que apanha o `noCompress` em falta
+- [X] T028 [P] [US3] Escrever em `app/src/test/java/com/mysky/app/domain/usecase/ObserveSkyEnrichmentConcurrencyTest.kt` o teste de que operador e rota de várias aeronaves se resolvem em concorrência e não em cadeia: com resoluções travadas, o tempo total tem de ser o da mais lenta e não a soma
+- [X] T029 [US3] Gate do armazenamento: `unzip -lv app/build/outputs/apk/debug/app-debug.apk | grep routes.bin` tem de mostrar **`Stored`**, nunca `Defl`. É o gate mais importante da feature e o único que apanha o `noCompress` em falta
 - [ ] T030 [US3] Confirmar por inspeção e por teste que nenhum caminho novo faz rede durante o ciclo de observação: a tabela é local, e `grep -rn "routes" app/src/main/java/com/mysky/app/data/source/` não pode devolver nada
 
 **Checkpoint**: o orçamento e o arranque continuam iguais.
