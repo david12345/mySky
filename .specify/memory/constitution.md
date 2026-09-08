@@ -1,5 +1,18 @@
 <!--
-Sync Impact Report
+Sync Impact Report — 1.1.0 (2026-09-08)
+- Versão: 1.0.0 → 1.1.0 (MINOR: alargamento de orientação existente no princípio IV)
+- Princípio IV: "Todos os `WorkRequest` são criados num único ponto do código" passa a
+  "cada tipo de trabalho de fundo tem um único ponto de criação dos seus `WorkRequest`s".
+- Motivo: a feature 003-flight-route introduz uma descarga pontual, pedida pelo utilizador, sem
+  relação com o orçamento de posições nem com o mínimo de 15 minutos que a regra original protege.
+  A redação anterior obrigaria a espremer esse trabalho para dentro do `SkyWorkScheduler`, que
+  existe para garantir as `Constraints` do sky refresh — misturando responsabilidades sem nenhum
+  ganho para a bateria, que é o bem que o princípio protege.
+- A garantia de fundo mantém-se intacta: continua a não haver criação avulsa de `WorkRequest`s
+  espalhada pelo código, e o sky refresh continua a ter um e um só ponto de agendamento.
+- Decisões afetadas: AD-003 (anotada), AD-016 (nova).
+
+Sync Impact Report — 1.0.0
 - Versão: (template não preenchido) → 1.0.0
 - Ratificação inicial do projeto mySky.
 - Princípios adicionados:
@@ -61,8 +74,10 @@ não contorna o Doze mode nem o App Standby e não promete tempo real ao utiliza
 sempre quando os dados foram atualizados pela última vez. Um foreground service permanente com
 localização ativa está proibido no MVP; introduzir um exige decisão de arquitetura registada e
 justificação explícita. O widget não faz rede na composição — lê o último resultado calculado e
-delega qualquer atualização em trabalho enfileirado. Todos os `WorkRequest` são criados num único
-ponto do código.
+delega qualquer atualização em trabalho enfileirado. **Cada tipo de trabalho de fundo tem um único
+ponto de criação dos seus `WorkRequest`s** — nenhuma classe agenda trabalho por sua conta. Tipos de
+trabalho com garantias diferentes (cadência de posição, descarga pontual pedida pelo utilizador)
+têm agendadores distintos, e nunca se misturam num só para cumprir a regra à letra.
 
 *Porquê:* uma app de aviões que descarrega a bateria é desinstalada na primeira semana. Os limites
 do Android não são obstáculos a contornar; são o contrato com o utilizador.
@@ -134,4 +149,4 @@ Desvios têm de ser justificados por escrito na decisão de arquitetura correspo
 sem justificação é motivo para rejeitar a alteração. Orientação de desenvolvimento no dia a dia
 (estrutura de pastas, comandos, convenções) vive no `CLAUDE.md`.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-06 | **Last Amended**: 2026-09-06
+**Version**: 1.1.0 | **Ratified**: 2026-09-06 | **Last Amended**: 2026-09-08

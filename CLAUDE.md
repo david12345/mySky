@@ -49,6 +49,10 @@ sítio que cria `WorkRequest`s.
 evita dois agendamentos a duplicar consumo de bateria.
 **Consequência:** o widget nunca faz rede em `provideGlance`; lê o último resultado do estado do
 Glance. O "tap-to-refresh" enfileira trabalho, não bloqueia a composição.
+**Alcance (nota da AD-016):** esta decisão é sobre o *sky refresh* — a cadência de posição que serve
+widget e notificações. Trabalho de fundo de outra natureza, sem relação com o orçamento de posições
+nem com o mínimo de 15 minutos, tem o seu próprio par worker/scheduler. A garantia mantém-se: cada
+tipo de trabalho tem um e um só ponto de agendamento (princípio IV, versão 1.1.0).
 
 ### AD-004 — Sem foreground service permanente no MVP
 As notificações são "best effort" dentro dos limites do Doze/App Standby.
@@ -166,6 +170,86 @@ transições que separa informar de mentir. Depois de o processo morrer e ser re
 detalhe no topo da pilha não há estado anterior, e a resposta correta é `NeverObserved`: nunca
 reaproveitar um voo anterior como se fosse atual.
 
+### AD-013 — A tabela de rotas é um ficheiro binário ordenado, lido por pesquisa binária
+584 832 rotas não cabem num `Map` como a tabela de operadores (169 KB, AD-007) cabe: com este
+volume, um `HashMap` custa da ordem de 100 MB só em overhead de objeto. A tabela vive em
+`assets/routes.bin` e, depois da primeira atualização aceite, em `filesDir` — registos de largura
+fixa (13 bytes: 7 de indicativo, 3+3 de siglas IATA), ordenados por indicativo, lidos com
+`RandomAccessFile` e pesquisa binária.
+**Porquê:** memória praticamente nula — o ficheiro fica na cache de páginas do sistema, não no heap
+— e consulta desprezível: **20 leituras e 37 µs por aeronave, 1,8 ms para uma lista de 50**,
+medidos. Room foi ponderado e rejeitado: traz entidades, DAOs e um índice B-tree para uma operação
+que é sempre a mesma consulta por chave exata, sem junções e sem necessidade de reatividade. O
+`MappedByteBuffer` foi rejeitado a favor do `RandomAccessFile` porque o Java não tem forma
+determinística de desmapear, e esta tabela **é substituída em runtime**: um mapeamento antigo podia
+ficar pendurado até o GC decidir, a cada atualização.
+**Consequência:** `assets/routes.bin` TEM de ser marcado `noCompress` no `build.gradle.kts`. Sem
+isso o AAPT comprime a entrada, a leitura por deslocamento deixa de funcionar e o ficheiro passa a
+ser descomprimido inteiro para memória — a decisão anula-se em silêncio. A construção do ficheiro
+fica em `tools/routes/build_routes_bin.py`, irmão do script das companhias; o runtime nunca lê CSV.
+
+### AD-014 — A app descarrega um binário já convertido, nunca as fontes em bruto
+O telemóvel nunca fala com o espelho dos dados. Só o script offline o faz, e o `routes.bin` que
+produz é publicado como **ficheiro de uma release do GitHub**, com URL estável, que é de onde a app
+o descarrega (comprimido, 2,5 MB). Substituição: descarrega para `cacheDir`, valida (assinatura,
+versão, contagem, data de geração no cabeçalho, tamanho múltiplo do registo) e só então
+`File.renameTo()` para `filesDir`.
+**Porquê:** descarregar os CSV em bruto (21 MB) obrigaria a reimplementar em Kotlin, no telefone, a
+junção ICAO→IATA, a filtragem e a ordenação que o script já faz — duas implementações da mesma
+regra a divergir em silêncio, que é o que o princípio VI manda evitar. O `rename` é atómico no
+Android, e um leitor com o ficheiro antigo aberto continua a lê-lo em segurança: FR-020 sem locks.
+O cabeçalho com a data de geração resolve FR-018 sem um segundo ficheiro de metadados cuja escrita
+teria de ser coordenada com a do binário.
+**Consequência:** a app usa o ficheiro de `filesDir` se existir e validar, senão lê o asset
+diretamente do APK — **nunca copia o asset só para ter tabela**, para não pôr 7,6 MB de I/O no
+caminho do primeiro arranque. A atualização real só existe quando alguém volta a correr o script e
+publica; se isso parar, o botão continua a funcionar e devolve a mesma tabela, o que FR-018 expõe
+sem enganar ninguém. Se o espelho desaparecer, perde-se a capacidade de gerar versões novas, nunca
+o funcionamento em runtime.
+
+### AD-015 — `RouteDirectory` é porta própria; o enriquecimento resolve-se em concorrência
+`domain/repository/RouteDirectory` com `findByCallsign`, implementada por `data/local/FileRouteDirectory`.
+`Route(originIata, destinationIata)` nunca existe com um lado só — a garantia de FR-006 vive no
+construtor, como no `Airline`. Um `Route.callsignKeyOf` no domínio normaliza o indicativo da mesma
+forma que o script gera as chaves.
+**Porquê:** mantém a fronteira da AD-007 — dado de referência não é fonte de voos. Mas há uma
+diferença que importa: a consulta de operador é uma leitura de `Map` depois do primeiro
+carregamento, a de rota é **sempre** I/O. Por isso corre em `@IoDispatcher`, e operador e rota de
+cada aeronave — e as aeronaves entre si — resolvem-se **concorrentemente**. Encadear duas pesquisas
+de disco por aeronave, sequencialmente, com dezenas de aeronaves por ciclo, passa despercebido em
+teste e aparece como atraso no dispositivo.
+**Consequência:** `OverheadFlight` ganha `route: Route? = null`, preenchido no mesmo passo que
+`airline`. Indicativo desconhecido devolve `null` e nunca esconde a aeronave.
+
+### AD-016 — A atualização da tabela tem worker e scheduler próprios
+`worker/RouteTableUpdateWorker` e `worker/RouteTableUpdateWorkScheduler`, paralelos ao par do sky
+refresh e não uma extensão dele. `OneTimeWorkRequest` com `NetworkType.CONNECTED` e
+`ExistingWorkPolicy.KEEP`. O `SettingsViewModel` observa o progresso por uma porta de domínio
+(`RouteTableRepository`, com `updateState` e `requestUpdate()`) e nunca importa `androidx.work.*`.
+**Porquê:** a AD-003 resolve um problema concreto — dois agendamentos de sky refresh a duplicar
+sondagens de posição. Este pedido é raro, único e sempre iniciado pelo utilizador, sem relação com
+posições nem com o mínimo de 15 minutos; metê-lo no `SkyWorkScheduler` misturaria numa classe
+coerente um método sem nada a ver com o que ela garante. O WorkManager continua a ser a ferramenta
+certa em vez de um scope do ViewModel: uma descarga de alguns MB deve sobreviver a o utilizador
+sair do ecrã.
+**Consequência:** obrigou a **emendar a constituição para 1.1.0** — o princípio IV dizia "todos os
+`WorkRequest` num único ponto", o que proibia isto à letra. Passou a "cada tipo de trabalho tem um
+único ponto de criação dos seus", que é a garantia que a regra sempre quis dar. A `SkySession`
+nunca sabe que esta atualização existe, e FR-023 fica garantido por separação de execução e não por
+coordenação.
+
+### AD-017 — Definições: um estado só, duas portas que não se misturam
+Esta feature cria a primeira entrada real no ecrã de definições. Fica fixado: um único
+`SettingsUiState`, que a feature de definições estenderá em vez de criar um segundo `StateFlow`; o
+`SettingsViewModel` não conhece `WorkManager`; e `SettingsRepository` (preferências do utilizador,
+DataStore) e `RouteTableRepository` (dado de referência, com data de geração lida do cabeçalho do
+ficheiro) são portas deliberadamente distintas.
+**Porquê:** custa pouco fixar agora e evita a reversão a meio da feature de definições, quando se
+descobrisse a tabela de rotas entalada dentro da `SettingsRepository` só porque já lá estava.
+**Consequência:** a feature de definições estende o estado existente e passa a alimentar o
+`ObserveSkyUseCase` com `OverheadCriteria` reais — fechando a promessa da AD-009 — sem tocar no que
+a 003 deixa.
+
 ## Estrutura de pastas
 
 ```
@@ -220,7 +304,8 @@ Relatórios: testes em `app/build/reports/tests/`, lint em `app/build/reports/li
 - **Versões só no `gradle/libs.versions.toml`.** Nunca escrever uma versão num `build.gradle.kts`.
 - **Um `data class` de estado por ecrã** (`MainUiState`), exposto num `StateFlow`; a UI nunca
   compõe estado a partir de vários flows soltos.
-- **Nada de `WorkRequest` fora de `SkyWorkScheduler`** e nada de rede em `provideGlance`.
+- **Nada de `WorkRequest` fora de um scheduler dedicado** (`SkyWorkScheduler` para o sky refresh,
+  `RouteTableUpdateWorkScheduler` para a tabela de rotas) e nada de rede em `provideGlance`.
 - **Erros de rede** são `Result.failure` na fronteira do repositório; exceções não sobem ao domain.
 - **TODOs marcados por feature**: `TODO(feature/<nome>)` para ligar o esqueleto às specs em
   `.specify/specs/`.
