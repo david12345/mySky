@@ -8,6 +8,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -34,8 +35,12 @@ class RouteTableUpdateWorkScheduler @Inject constructor(
      *
      * `KEEP` e não `REPLACE`: um segundo toque com uma descarga já em curso não a reinicia do zero
      * — o utilizador impaciente não pode custar duas transferências.
+     *
+     * @return o identificador do trabalho, para quem observa saber **qual** dos resultados no
+     *   histórico é o desta tentativa. O WorkManager mantém os anteriores durante algum tempo, e
+     *   sem isto uma falha antiga podia tapar um sucesso novo.
      */
-    fun requestUpdate() {
+    fun requestUpdate(): UUID {
         val request = OneTimeWorkRequestBuilder<RouteTableUpdateWorker>()
             .setConstraints(
                 Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build(),
@@ -47,6 +52,7 @@ class RouteTableUpdateWorkScheduler @Inject constructor(
             ExistingWorkPolicy.KEEP,
             request,
         )
+        return request.id
     }
 
     /** O estado do trabalho, para o repositório traduzir em linguagem de domínio. */

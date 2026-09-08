@@ -89,8 +89,13 @@ fonte é exatamente 7.
 1. assinatura correta;
 2. versão do formato conhecida;
 3. `(tamanho − 32)` divisível por 13;
-4. `(tamanho − 32) / 13` igual à contagem do cabeçalho;
-5. contagem acima de um mínimo plausível — protege contra um ficheiro tecnicamente válido mas vazio.
+4. `(tamanho − 32) / 13` igual à contagem do cabeçalho.
+
+Estes quatro passos são sobre o **formato** e valem para qualquer tabela, venha ela do APK ou de uma
+atualização. O volume — contagem acima de um mínimo plausível, e não muito menor do que a tabela que
+já lá está — é **política de instalação** e é verificada só no instalador: uma tabela pequena de mais
+para ser aceite hoje continua a ser perfeitamente legível se for a que veio no APK, e recusá-la aí
+deixaria a app sem rotas nenhumas em vez de com poucas.
 
 Qualquer falha descarta o download e **preserva a tabela anterior** (FR-020). A validação acontece
 no ficheiro temporário, antes do `rename`, e é por isso que a tabela canónica nunca chega a ser

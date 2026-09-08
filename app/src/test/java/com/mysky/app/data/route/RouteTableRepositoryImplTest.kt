@@ -5,6 +5,7 @@ import androidx.work.WorkInfo
 import com.mysky.app.data.local.FileTableReader
 import com.mysky.app.data.local.RouteTableFixtures
 import com.mysky.app.data.local.RouteTableSource
+import com.mysky.app.data.route.NetworkAvailability
 import com.mysky.app.domain.model.RouteUpdateError
 import com.mysky.app.domain.model.RouteUpdateState
 import com.mysky.app.worker.RouteTableUpdateWorkScheduler
@@ -40,7 +41,11 @@ class RouteTableRepositoryImplTest {
 
     private val scheduler = mockk<RouteTableUpdateWorkScheduler>(relaxed = true)
     private val source = mockk<RouteTableSource>()
+    private val network = mockk<NetworkAvailability>()
     private val work = MutableStateFlow<List<WorkInfo>>(emptyList())
+
+    /** O id que o scheduler devolve, para os testes poderem falar do trabalho "desta tentativa". */
+    private val requestId: UUID = UUID.randomUUID()
 
     private lateinit var table: File
 
@@ -52,14 +57,20 @@ class RouteTableRepositoryImplTest {
             generatedAtEpochSeconds = 1_757_289_600L,
         )
         every { scheduler.observeWork() } returns work
+        every { scheduler.requestUpdate() } returns requestId
         every { source.open() } answers { FileTableReader(table) }
+        every { network.isOnline() } returns true
     }
 
     private fun TestScope.repository() =
-        RouteTableRepositoryImpl(scheduler, source, StandardTestDispatcher(testScheduler))
+        RouteTableRepositoryImpl(scheduler, source, network, StandardTestDispatcher(testScheduler))
 
-    private fun workInfo(state: WorkInfo.State, reason: String? = null): WorkInfo = WorkInfo(
-        /* id = */ UUID.randomUUID(),
+    private fun workInfo(
+        state: WorkInfo.State,
+        reason: String? = null,
+        id: UUID = requestId,
+    ): WorkInfo = WorkInfo(
+        /* id = */ id,
         /* state = */ state,
         /* tags = */ emptySet(),
         /* outputData = */ reason?.let {
@@ -104,11 +115,13 @@ class RouteTableRepositoryImplTest {
 
     @Test
     fun `sucesso traz a data e a contagem da tabela que ficou instalada`() = runTest {
+        val repository = repository()
+        repository.requestUpdate()
         // O worker escreve um ficheiro, não devolve dados: a contagem é lida da mesma fonte que o
         // ecrã usa para mostrar a data em uso, e por isso as duas nunca se podem contradizer.
         work.value = listOf(workInfo(WorkInfo.State.SUCCEEDED))
 
-        val state = repository().updateState.first()
+        val state = repository.updateState.first()
 
         assertEquals(RouteUpdateState.Success(1_757_289_600L, 150_000), state)
     }
@@ -116,6 +129,7 @@ class RouteTableRepositoryImplTest {
     @Test
     fun `cada causa de falha chega distinta ao ecra`() = runTest {
         val repository = repository()
+        repository.requestUpdate()
 
         work.value = listOf(workInfo(WorkInfo.State.FAILED, RouteTableUpdateWorker.REASON_UNREACHABLE))
         assertEquals(
@@ -138,9 +152,74 @@ class RouteTableRepositoryImplTest {
 
     @Test
     fun `trabalho cancelado volta ao estado parado`() = runTest {
+        val repository = repository()
+        repository.requestUpdate()
         work.value = listOf(workInfo(WorkInfo.State.CANCELLED))
 
-        assertEquals(RouteUpdateState.Idle, repository().updateState.first())
+        assertEquals(RouteUpdateState.Idle, repository.updateState.first())
+    }
+
+    @Test
+    fun `uma falha antiga no historico nao tapa o sucesso desta tentativa`() = runTest {
+        // O WorkManager guarda o histórico do mesmo nome único durante algum tempo, e publica os
+        // dois lado a lado. Escolher "o estado mais avançado" dava a pior resposta possível, porque
+        // `FAILED` vem depois de `SUCCEEDED` na ordem do enumerado — o utilizador pedia a
+        // atualização, ela corria bem, e o ecrã continuava a mostrar a falha da vez anterior.
+        val repository = repository()
+        repository.requestUpdate()
+        val antiga = workInfo(
+            state = WorkInfo.State.FAILED,
+            reason = RouteTableUpdateWorker.REASON_UNREACHABLE,
+            id = UUID.randomUUID(),
+        )
+
+        work.value = listOf(antiga, workInfo(WorkInfo.State.SUCCEEDED))
+
+        assertEquals(
+            RouteUpdateState.Success(1_757_289_600L, 150_000),
+            repository.updateState.first(),
+        )
+    }
+
+    @Test
+    fun `um resultado de outra tentativa nao e apresentado como sendo desta`() = runTest {
+        val repository = repository()
+
+        work.value = listOf(workInfo(WorkInfo.State.SUCCEEDED, id = UUID.randomUUID()))
+
+        // Sem pedido nosso, um resultado no histórico não é nosso para mostrar.
+        assertEquals(RouteUpdateState.Idle, repository.updateState.first())
+    }
+
+    // --- Sem rede, dito de imediato -------------------------------------------------------------
+
+    @Test
+    fun `sem rede a falha e imediata e nenhum trabalho e enfileirado`() = runTest {
+        // Com `NetworkType.CONNECTED`, enfileirar sem rede deixaria o trabalho em espera: o
+        // WorkManager não o corre e não falha, e o ecrã ficaria em "A atualizar…" durante horas.
+        every { network.isOnline() } returns false
+        val repository = repository()
+
+        repository.requestUpdate()
+
+        assertEquals(
+            RouteUpdateState.Failure(RouteUpdateError.NoConnection),
+            repository.updateState.first(),
+        )
+        verify(exactly = 0) { scheduler.requestUpdate() }
+    }
+
+    @Test
+    fun `voltar a pedir com rede limpa a falha anterior`() = runTest {
+        every { network.isOnline() } returns false
+        val repository = repository()
+        repository.requestUpdate()
+
+        every { network.isOnline() } returns true
+        repository.requestUpdate()
+        work.value = listOf(workInfo(WorkInfo.State.RUNNING))
+
+        assertEquals(RouteUpdateState.InProgress, repository.updateState.first())
     }
 
     // --- Nada acontece sem o utilizador pedir (SC-010) -------------------------------------------

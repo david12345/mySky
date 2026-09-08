@@ -24,10 +24,18 @@ import kotlinx.coroutines.withContext
 class FileRouteDirectory @Inject constructor(
     private val source: RouteTableSource,
     @IoDispatcher private val dispatcher: CoroutineDispatcher,
-) : RouteDirectory {
+) : RouteDirectory, RouteTableCache {
 
     private val mutex = Mutex()
+
+    // `@Volatile` porque a primeira leitura de `table` acontece **fora** do mutex, no caminho
+    // rápido: sem isto, uma escrita feita sob o lock por uma thread do `Dispatchers.IO` podia não
+    // ser visível para uma leitura noutra. Hoje o pior caso seria reentrar no lock sem necessidade,
+    // mas é correção por sorte de escalonamento e não por construção.
+    @Volatile
     private var table: OpenTable? = null
+
+    @Volatile
     private var loaded = false
 
     private class OpenTable(val reader: RouteTableReader, val header: RouteTableHeader)
@@ -47,7 +55,7 @@ class FileRouteDirectory @Inject constructor(
      * garanti-lo — por isso a consulta em curso termina em segurança; só a seguinte é que passa a
      * ver a tabela nova.
      */
-    suspend fun invalidate() = mutex.withLock {
+    override suspend fun invalidate() = mutex.withLock {
         table?.reader?.close()
         table = null
         loaded = false

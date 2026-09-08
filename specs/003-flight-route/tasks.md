@@ -150,7 +150,23 @@ rota passam a tê-la; e interromper a atualização, verificando que a tabela an
 - [X] T046 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes
 - [X] T047 Executar a validação manual de [quickstart.md](./quickstart.md) secções 6 a 9, com atenção aos passos 10 (matar a app a meio de uma atualização) e 12 (nenhuma transferência sem pedido), e à contagem de pedidos e ao tempo de arranque
 - [X] T048 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (princípio VI)
-- [ ] T049 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
+- [X] T049 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
+
+### Achados da revisão (T048)
+
+Nove achados; todos tratados. Três críticos, todos com prova empírica do revisor.
+
+| # | Achado | Tratamento |
+|---|---|---|
+| 1 | **CRÍTICO** — `RandomAccessFile.seek` + `read` não é atómico, e o enriquecimento é concorrente por desenho. Duas consultas em simultâneo devolviam a rota de **outro voo**. Só afetava o caminho pós-atualização; o asset já era seguro | Leitura posicional por `FileChannel` nas duas implementações, com `readFully`. Teste com 16 threads e 2000 leituras, que **falha** com o código antigo |
+| 2 | **CRÍTICO** — o estado escolhia o `WorkInfo` de ordinal mais alto, e `FAILED` vem depois de `SUCCEEDED`. Uma falha antiga no histórico tapava o sucesso novo | O scheduler devolve o id do pedido; o repositório só olha para o trabalho desta tentativa, e um trabalho por terminar ganha sempre |
+| 3 | **CRÍTICO** — `NoConnection` era inatingível. Sem rede, o pedido ficava enfileirado pela restrição do `WorkRequest` e o ecrã dizia "A atualizar…" indefinidamente | Verificação de conectividade **antes** de enfileirar; a restrição fica como rede de segurança para a ligação que cai a meio |
+| 4 | `table` e `loaded` sem `@Volatile` num double-checked locking | Anotados |
+| 5 | O worker dependia do tipo concreto `FileRouteDirectory` | Porta `RouteTableCache` na camada de dados |
+| 6 | O `renameTo` podia falhar entre volumes e esse caminho não tinha teste | Teste com destino intransponível |
+| 7 | O `data-model.md` dizia que `readHeader` aplica o mínimo de registos; não aplica nem deve | Documento corrigido: formato é uma coisa, política de instalação é outra |
+| 8 | `HttpURLConnection` era uma segunda forma de fazer rede no projeto | Passou a usar o `OkHttpClient` já configurado |
+| 9 | KDoc atribuía a garantia da seta à função errada | Corrigido |
 
 ---
 

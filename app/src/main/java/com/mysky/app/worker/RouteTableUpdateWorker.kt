@@ -7,12 +7,12 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.mysky.app.data.local.InstallResult
 import com.mysky.app.data.local.RouteTableInstaller
-import com.mysky.app.data.local.FileRouteDirectory
+import com.mysky.app.data.local.RouteTableCache
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
  * Descarrega e instala uma tabela de rotas nova, a pedido do utilizador.
@@ -33,32 +33,30 @@ class RouteTableUpdateWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val installer: RouteTableInstaller,
-    private val directory: FileRouteDirectory,
+    private val cache: RouteTableCache,
+    private val httpClient: OkHttpClient,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = try {
-        val connection = (URL(TABLE_URL).openConnection() as HttpURLConnection).apply {
-            connectTimeout = TIMEOUT_MILLIS
-            readTimeout = TIMEOUT_MILLIS
-            requestMethod = "GET"
-        }
-        try {
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+        // O mesmo cliente que serve a fonte de voos, e não uma segunda forma de fazer rede no
+        // projeto: os timeouts e a configuração ficam num sítio só.
+        val request = Request.Builder().url(TABLE_URL).get().build()
+        httpClient.newCall(request).execute().use { response ->
+            val body = response.body
+            if (!response.isSuccessful || body == null) {
                 failure(REASON_UNREACHABLE)
             } else {
-                when (connection.inputStream.use { installer.install(it) }) {
+                when (installer.install(body.byteStream())) {
                     InstallResult.Installed -> {
                         // A tabela mudou debaixo de quem a lê: invalidar é o que faz a consulta
                         // seguinte ver a nova sem reiniciar a app (FR-021).
-                        directory.invalidate()
+                        cache.invalidate()
                         Result.success()
                     }
                     InstallResult.InvalidData -> failure(REASON_INVALID)
                     InstallResult.WriteFailed -> failure(REASON_UNEXPECTED)
                 }
             }
-        } finally {
-            connection.disconnect()
         }
     } catch (io: IOException) {
         // Sem rede e servidor inalcançável são indistinguíveis daqui; a diferença que o utilizador
@@ -85,7 +83,5 @@ class RouteTableUpdateWorker @AssistedInject constructor(
          * o histórico do git crescer a cada geração da tabela.
          */
         const val TABLE_URL = "https://github.com/david12345/mySky/releases/latest/download/routes.bin"
-
-        private const val TIMEOUT_MILLIS = 30_000
     }
 }

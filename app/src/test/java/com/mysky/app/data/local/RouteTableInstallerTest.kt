@@ -150,6 +150,21 @@ class RouteTableInstallerTest {
         assertArrayEquals(ligeiramenteMenor, canonical.readBytes())
     }
 
+    @Test
+    fun `um rename falhado nao estraga a tabela anterior`() = runTest {
+        // A Javadoc de `File.renameTo` avisa que a operação pode não funcionar entre sistemas de
+        // ficheiros. Em Android o `cacheDir` e o `filesDir` vivem no mesmo volume, por isso na
+        // prática funciona — mas é uma coincidência de arrumação, não um contrato. Se um dia falhar,
+        // o que não pode falhar é a garantia: a tabela anterior fica.
+        val bloqueado = folder.newFolder("intransponivel")
+        every { source.updatedFile } returns bloqueado
+
+        val result = installer().install(ByteArrayInputStream(tableBytes(160_000)))
+
+        assertEquals(InstallResult.WriteFailed, result)
+        assertTabelaAnteriorIntacta()
+    }
+
     // --- Sem tabela anterior --------------------------------------------------------------------
 
     @Test

@@ -370,14 +370,27 @@ Continuam por implementar, como esqueleto com `TODO(feature/...)`: `SettingsRepo
 `SightingRepository`/Room, `LocationRepositoryImpl.locationUpdates`, widget, worker e notificações.
 O ecrã de definições continua a ser um beco sem saída — é o que resta dos dois que a 001 deixou.
 
-**Validação em dispositivo (T041) feita a 2026-09-07:** os dois riscos que a revisão apontou
-verificaram-se no terreno. Com o modo de avião ligado o detalhe mantém os valores e diz a causa, sem
-nunca afirmar que a aeronave partiu; e ter o detalhe aberto não aumenta o número de pedidos face a
-ficar só na lista (SC-008), o que confirma que a sessão está mesmo partilhada.
+**`003-flight-route` implementada.** Cada voo mostra `LIS → CDG` na lista e no detalhe, a partir de
+uma tabela local de 584 832 rotas embarcada no APK. E o ecrã de definições — que era um esqueleto —
+tem a sua primeira entrada real: a atualização dessa tabela, a pedido do utilizador.
 
-**Dívida ainda aberta, da 001:** a mediana do tempo de arranque (SC-001) e a cobertura da tabela de
-operadores (SC-004) continuam por medir. Nunca deram sinal de problema — ver os critérios de saída
-de `specs/001-sky-list/quickstart.md`.
+232 testes unitários verdes, lint sem erros, APK de 24 para 30 MB.
 
-**Feature seguinte:** `003-settings` (desbloqueia o `SettingsRepositoryImpl`, que a AD-009 deixou
-por fazer, e fecha o último beco sem saída da app) ou `002-widget` como previsto na AD-003.
+A tabela é um ficheiro binário de largura fixa lido por pesquisa binária (AD-013): 20 leituras e
+37 µs por aeronave, memória praticamente nula. A substituição é `rename` atómico depois de validar,
+o que garante que uma atualização interrompida nunca deixa a app sem tabela — sem locks e sem
+coordenação.
+
+**Falta para dar a feature por fechada:** a validação manual de
+`specs/003-flight-route/quickstart.md`, secções 6 a 9. Os passos que mais importam são o 10 (matar a
+app a meio de uma atualização) e o 12 (nenhuma transferência sem o utilizador pedir), mais a
+contagem de cobertura real (SC-001, ≥70%) e a verificação de 30 rotas contra uma fonte independente
+(SC-007).
+
+**Dívida conhecida:** o SC-005 — a mediana do arranque não piorar — ficou **inverificável** por
+decisão de 2026-09-08: o valor de antes nunca foi medido e os 7,6 MB já entraram no APK. Vale a pena
+cronometrar o arranque agora, não para provar nada sobre esta feature, mas para dar a linha de base
+que falta à seguinte. O mesmo se aplica à cobertura da tabela de operadores (SC-004 da 001).
+
+**Feature seguinte:** `004-settings` (raio, elevação mínima, unidades — desbloqueia o
+`SettingsRepositoryImpl` e fecha a promessa da AD-009) ou o widget, como previsto na AD-003.
