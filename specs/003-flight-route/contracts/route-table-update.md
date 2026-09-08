@@ -47,6 +47,10 @@ A garantia 6 tem de ser testada pela negativa — uma sessão inteira de uso sem
 
 ## De onde vem o ficheiro
 
-Uma release do repositório do próprio projeto, com URL estável, servida por CDN. **Não** o espelho
-dos dados em bruto: a conversão de CSV para binário acontece no script offline e em mais lado
-nenhum (AD-014).
+Uma release do repositório do próprio projeto, servida por CDN, numa **tag fixa dedicada aos dados**
+(`routes-latest`) e não em `latest`. **Não** o espelho dos dados em bruto: a conversão de CSV para
+binário acontece no script offline e em mais lado nenhum (AD-014).
+
+A tag fixa não é detalhe: com `latest`, publicar uma release de aplicação sem a tabela faria o
+`routes.bin` desaparecer do URL, e a atualização passaria a falhar como se o servidor não
+respondesse.

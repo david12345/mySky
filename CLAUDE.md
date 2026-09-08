@@ -190,8 +190,8 @@ fica em `tools/routes/build_routes_bin.py`, irmão do script das companhias; o r
 
 ### AD-014 — A app descarrega um binário já convertido, nunca as fontes em bruto
 O telemóvel nunca fala com o espelho dos dados. Só o script offline o faz, e o `routes.bin` que
-produz é publicado como **ficheiro de uma release do GitHub**, com URL estável, que é de onde a app
-o descarrega (comprimido, 2,5 MB). Substituição: descarrega para `cacheDir`, valida (assinatura,
+produz é publicado como **ficheiro de uma release do GitHub**, numa **tag fixa e dedicada aos
+dados** (`routes-latest`), que é de onde a app o descarrega. Substituição: descarrega para `cacheDir`, valida (assinatura,
 versão, contagem, data de geração no cabeçalho, tamanho múltiplo do registo) e só então
 `File.renameTo()` para `filesDir`.
 **Porquê:** descarregar os CSV em bruto (21 MB) obrigaria a reimplementar em Kotlin, no telefone, a
@@ -200,6 +200,11 @@ regra a divergir em silêncio, que é o que o princípio VI manda evitar. O `ren
 Android, e um leitor com o ficheiro antigo aberto continua a lê-lo em segurança: FR-020 sem locks.
 O cabeçalho com a data de geração resolve FR-018 sem um segundo ficheiro de metadados cuja escrita
 teria de ser coordenada com a do binário.
+**A tag é fixa, não `latest`** — correção feita a 2026-09-08, depois de a primeira release ser
+publicada. Com `latest`, a primeira release de aplicação (com o APK e sem a tabela) passaria a ser a
+mais recente, o `routes.bin` deixaria de existir nesse URL e a atualização partia-se, com o
+utilizador a ver "não foi possível chegar ao servidor" sem pista nenhuma da causa. Releases de
+aplicação e de dados não têm relação uma com a outra e não podem partilhar um ponteiro.
 **Consequência:** a app usa o ficheiro de `filesDir` se existir e validar, senão lê o asset
 diretamente do APK — **nunca copia o asset só para ter tabela**, para não pôr 7,6 MB de I/O no
 caminho do primeiro arranque. A atualização real só existe quando alguém volta a correr o script e

@@ -77,11 +77,21 @@ class RouteTableUpdateWorker @AssistedInject constructor(
         const val REASON_INVALID = "invalid"
         const val REASON_UNEXPECTED = "unexpected"
 
+        /** Tag fixa, recriada a cada geração da tabela; o URL abaixo nunca muda. */
+        const val TABLE_TAG = "routes-latest"
+
         /**
          * Ficheiro de uma release do próprio repositório, e não do espelho dos dados em bruto nem
          * de `raw.githubusercontent`: as releases são servidas por CDN, têm URL estável e não fazem
          * o histórico do git crescer a cada geração da tabela.
+         *
+         * A tag é **fixa e dedicada aos dados**, e não `latest`. Com `latest`, a primeira release de
+         * aplicação — com o APK e sem a tabela — passaria a ser a mais recente, o `routes.bin`
+         * deixaria de existir nesse URL, e a atualização partia-se: o utilizador veria "não foi
+         * possível chegar ao servidor" sem nada que indicasse a verdadeira causa. Assim, releases de
+         * aplicação e de dados são independentes.
          */
-        const val TABLE_URL = "https://github.com/david12345/mySky/releases/latest/download/routes.bin"
+        const val TABLE_URL =
+            "https://github.com/david12345/mySky/releases/download/$TABLE_TAG/routes.bin"
     }
 }
