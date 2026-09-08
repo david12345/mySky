@@ -112,7 +112,7 @@ depois da feature, no mesmo local e à mesma hora.
 
 - [X] T028 [P] [US3] Escrever em `app/src/test/java/com/mysky/app/domain/usecase/ObserveSkyEnrichmentConcurrencyTest.kt` o teste de que operador e rota de várias aeronaves se resolvem em concorrência e não em cadeia: com resoluções travadas, o tempo total tem de ser o da mais lenta e não a soma
 - [X] T029 [US3] Gate do armazenamento: `unzip -lv app/build/outputs/apk/debug/app-debug.apk | grep routes.bin` tem de mostrar **`Stored`**, nunca `Defl`. É o gate mais importante da feature e o único que apanha o `noCompress` em falta
-- [ ] T030 [US3] Confirmar por inspeção e por teste que nenhum caminho novo faz rede durante o ciclo de observação: a tabela é local, e `grep -rn "routes" app/src/main/java/com/mysky/app/data/source/` não pode devolver nada
+- [X] T030 [US3] Confirmar por inspeção e por teste que nenhum caminho novo faz rede durante o ciclo de observação: a tabela é local, e `grep -rn "routes" app/src/main/java/com/mysky/app/data/source/` não pode devolver nada
 
 **Checkpoint**: o orçamento e o arranque continuam iguais.
 
@@ -125,18 +125,18 @@ depois da feature, no mesmo local e à mesma hora.
 **Independent Test**: com uma tabela antiga instalada, pedir a atualização e verificar que voos sem
 rota passam a tê-la; e interromper a atualização, verificando que a tabela antiga fica.
 
-- [ ] T031 [P] [US4] Escrever `app/src/test/java/com/mysky/app/data/route/RouteTableReplaceTest.kt` com a interrupção nos quatro pontos — antes de escrever, a meio da escrita, depois de escrever e antes de validar, depois de validar e antes do `rename` — confirmando nos quatro que a tabela anterior fica íntegra e utilizável (FR-020, SC-008), e um quinto caso: uma tabela nova válida mas com muito menos registos é recusada (SC-009)
-- [ ] T032 [P] [US4] Escrever `app/src/test/java/com/mysky/app/data/route/RouteTableRepositoryImplTest.kt`: a tradução para `RouteUpdateState`, com uma variante de `RouteUpdateError` por causa distinguível, e o pedido duplicado a não enfileirar duas vezes
-- [ ] T033 [US4] Criar `app/src/main/java/com/mysky/app/domain/model/RouteUpdateState.kt` e `app/src/main/java/com/mysky/app/domain/repository/RouteTableRepository.kt` conforme [contracts/route-table-update.md](./contracts/route-table-update.md)
-- [ ] T034 [US4] Acrescentar a `app/src/main/java/com/mysky/app/data/local/RouteTableFile.kt` a substituição: escrita para `cacheDir`, validação completa, e `renameTo` para `filesDir` só no fim. É o `rename` atómico que dá FR-020 sem locks
-- [ ] T035 [US4] Acrescentar à validação a **regressão de cobertura** (SC-009): uma tabela nova com menos registos do que uma fração da anterior é recusada e a anterior fica. Um ficheiro truncado a montante passaria todas as outras verificações — assinatura, versão, tamanho múltiplo, contagem coerente — e degradaria a app em silêncio, que é a única forma de esta feature piorar sozinha
-- [ ] T036 [US4] Implementar `app/src/main/java/com/mysky/app/worker/RouteTableUpdateWorker.kt`: descarrega o ficheiro da release, delega a validação e a substituição em `RouteTableFile`
-- [ ] T037 [US4] Implementar `app/src/main/java/com/mysky/app/worker/RouteTableUpdateWorkScheduler.kt` com `OneTimeWorkRequest`, `NetworkType.CONNECTED` e `ExistingWorkPolicy.KEEP` — o **único** ponto que cria `WorkRequest`s deste tipo de trabalho (AD-016, princípio IV 1.1.0)
-- [ ] T038 [US4] Implementar `app/src/main/java/com/mysky/app/data/route/RouteTableRepositoryImpl.kt`, traduzindo `WorkInfo` para `RouteUpdateState` — é aqui que o Android para, e não no ViewModel
-- [ ] T039 [US4] Implementar `app/src/main/java/com/mysky/app/presentation/settings/SettingsUiState.kt` e `SettingsViewModel.kt`, com um único estado por ecrã e **sem importar `androidx.work.*`** (AD-017)
-- [ ] T040 [US4] Implementar `app/src/main/java/com/mysky/app/presentation/settings/SettingsScreen.kt`: data dos dados em uso, ação de atualizar, progresso e resultado, com uma mensagem por causa de falha
-- [ ] T041 [US4] Acrescentar os bindings de `RouteTableRepository` e do scheduler em `app/src/main/java/com/mysky/app/di/RouteModule.kt`
-- [ ] T042 [US4] Escrever em `RouteTableRepositoryImplTest.kt` o teste pela negativa de SC-010: uma sessão inteira sem o utilizador pedir nada não enfileira trabalho nenhum. É o que se estraga com um `init` bem-intencionado, sem dar erro
+- [X] T031 [P] [US4] Escrever `app/src/test/java/com/mysky/app/data/route/RouteTableReplaceTest.kt` com a interrupção nos quatro pontos — antes de escrever, a meio da escrita, depois de escrever e antes de validar, depois de validar e antes do `rename` — confirmando nos quatro que a tabela anterior fica íntegra e utilizável (FR-020, SC-008), e um quinto caso: uma tabela nova válida mas com muito menos registos é recusada (SC-009)
+- [X] T032 [P] [US4] Escrever `app/src/test/java/com/mysky/app/data/route/RouteTableRepositoryImplTest.kt`: a tradução para `RouteUpdateState`, com uma variante de `RouteUpdateError` por causa distinguível, e o pedido duplicado a não enfileirar duas vezes
+- [X] T033 [US4] Criar `app/src/main/java/com/mysky/app/domain/model/RouteUpdateState.kt` e `app/src/main/java/com/mysky/app/domain/repository/RouteTableRepository.kt` conforme [contracts/route-table-update.md](./contracts/route-table-update.md)
+- [X] T034 [US4] Acrescentar a `app/src/main/java/com/mysky/app/data/local/RouteTableFile.kt` a substituição: escrita para `cacheDir`, validação completa, e `renameTo` para `filesDir` só no fim. É o `rename` atómico que dá FR-020 sem locks
+- [X] T035 [US4] Acrescentar à validação a **regressão de cobertura** (SC-009): uma tabela nova com menos registos do que uma fração da anterior é recusada e a anterior fica. Um ficheiro truncado a montante passaria todas as outras verificações — assinatura, versão, tamanho múltiplo, contagem coerente — e degradaria a app em silêncio, que é a única forma de esta feature piorar sozinha
+- [X] T036 [US4] Implementar `app/src/main/java/com/mysky/app/worker/RouteTableUpdateWorker.kt`: descarrega o ficheiro da release, delega a validação e a substituição em `RouteTableFile`
+- [X] T037 [US4] Implementar `app/src/main/java/com/mysky/app/worker/RouteTableUpdateWorkScheduler.kt` com `OneTimeWorkRequest`, `NetworkType.CONNECTED` e `ExistingWorkPolicy.KEEP` — o **único** ponto que cria `WorkRequest`s deste tipo de trabalho (AD-016, princípio IV 1.1.0)
+- [X] T038 [US4] Implementar `app/src/main/java/com/mysky/app/data/route/RouteTableRepositoryImpl.kt`, traduzindo `WorkInfo` para `RouteUpdateState` — é aqui que o Android para, e não no ViewModel
+- [X] T039 [US4] Implementar `app/src/main/java/com/mysky/app/presentation/settings/SettingsUiState.kt` e `SettingsViewModel.kt`, com um único estado por ecrã e **sem importar `androidx.work.*`** (AD-017)
+- [X] T040 [US4] Implementar `app/src/main/java/com/mysky/app/presentation/settings/SettingsScreen.kt`: data dos dados em uso, ação de atualizar, progresso e resultado, com uma mensagem por causa de falha
+- [X] T041 [US4] Acrescentar os bindings de `RouteTableRepository` e do scheduler em `app/src/main/java/com/mysky/app/di/RouteModule.kt`
+- [X] T042 [US4] Escrever em `RouteTableRepositoryImplTest.kt` o teste pela negativa de SC-010: uma sessão inteira sem o utilizador pedir nada não enfileira trabalho nenhum. É o que se estraga com um `init` bem-intencionado, sem dar erro
 
 **Checkpoint**: todas as histórias completas.
 
@@ -144,12 +144,12 @@ rota passam a tê-la; e interromper a atualização, verificando que a tabela an
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T043 [P] Verificar que nenhum ficheiro em `app/src/main/java/com/mysky/app/domain/` importa `android.*`, Retrofit, Room, Compose ou WorkManager (princípio I): `grep -rE "^import (android|retrofit2|androidx\.room|androidx\.compose|androidx\.work)" app/src/main/java/com/mysky/app/domain/`
-- [ ] T044 [P] Verificar que `WorkRequest` só é criado nos dois schedulers (princípio IV, 1.1.0): `grep -rln "WorkRequest" app/src/main/java/com/mysky/app/ | grep -v "WorkScheduler"` tem de não devolver nada
-- [ ] T045 [P] Verificar que o `SettingsViewModel` não conhece o WorkManager (AD-017): `grep -rn "androidx.work" app/src/main/java/com/mysky/app/presentation/` tem de não devolver nada
-- [ ] T046 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes
-- [ ] T047 Executar a validação manual de [quickstart.md](./quickstart.md) secções 6 a 9, com atenção aos passos 10 (matar a app a meio de uma atualização) e 12 (nenhuma transferência sem pedido), e à contagem de pedidos e ao tempo de arranque
-- [ ] T048 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (princípio VI)
+- [X] T043 [P] Verificar que nenhum ficheiro em `app/src/main/java/com/mysky/app/domain/` importa `android.*`, Retrofit, Room, Compose ou WorkManager (princípio I): `grep -rE "^import (android|retrofit2|androidx\.room|androidx\.compose|androidx\.work)" app/src/main/java/com/mysky/app/domain/`
+- [X] T044 [P] Verificar que `WorkRequest` só é **criado** nos schedulers dedicados (princípio IV, 1.1.0): `grep -rn "WorkRequestBuilder\|OneTimeWorkRequest\.\|PeriodicWorkRequest\." app/src/main/java/com/mysky/app/ | grep -vE ":\s*(\*|//)" | grep -v WorkScheduler` tem de não devolver nada. Procurar a **construção** e excluir comentários é o que torna o gate decidível à máquina: a palavra `WorkRequest` aparece em KDoc de três ficheiros que não agendam nada
+- [X] T045 [P] Verificar que o `SettingsViewModel` não conhece o WorkManager (AD-017): `grep -rn "androidx.work" app/src/main/java/com/mysky/app/presentation/` tem de não devolver nada
+- [X] T046 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes
+- [X] T047 Executar a validação manual de [quickstart.md](./quickstart.md) secções 6 a 9, com atenção aos passos 10 (matar a app a meio de uma atualização) e 12 (nenhuma transferência sem pedido), e à contagem de pedidos e ao tempo de arranque
+- [X] T048 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (princípio VI)
 - [ ] T049 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
 
 ---

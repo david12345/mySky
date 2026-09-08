@@ -52,4 +52,13 @@ object RouteTableFixtures {
     )
 
     fun reader(file: File): RouteTableReader = FileTableReader(file)
+
+    /**
+     * Uma tabela com [count] rotas sintéticas, para exercitar o limiar de volume real.
+     *
+     * As chaves têm largura fixa (`A000001`), por isso a ordem alfabética coincide com a numérica —
+     * e o ficheiro sai ordenado como a pesquisa binária espera.
+     */
+    fun largeRoutes(count: Int): List<Triple<String, String, String>> =
+        (1..count).map { index -> Triple("A%06d".format(index), "LIS", "OPO") }
 }

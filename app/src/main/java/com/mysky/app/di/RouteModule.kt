@@ -1,7 +1,9 @@
 package com.mysky.app.di
 
 import com.mysky.app.data.local.FileRouteDirectory
+import com.mysky.app.data.route.RouteTableRepositoryImpl
 import com.mysky.app.domain.repository.RouteDirectory
+import com.mysky.app.domain.repository.RouteTableRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -19,4 +21,10 @@ abstract class RouteModule {
     @Binds
     @Singleton
     abstract fun bindRouteDirectory(implementation: FileRouteDirectory): RouteDirectory
+
+    @Binds
+    @Singleton
+    abstract fun bindRouteTableRepository(
+        implementation: RouteTableRepositoryImpl,
+    ): RouteTableRepository
 }
