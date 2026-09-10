@@ -255,6 +255,69 @@ descobrisse a tabela de rotas entalada dentro da `SettingsRepository` só porque
 `ObserveSkyUseCase` com `OverheadCriteria` reais — fechando a promessa da AD-009 — sem tocar no que
 a 003 deixa.
 
+### AD-018 — As preferências entram na `SkySession` por leitura direta, não por parâmetro
+A `SkySession` passa a depender do `SettingsRepository` como já depende do `LocationRepository`, e
+lê `settings.first().toCriteria()` no início de cada `refreshOnce()` — sem manter subscrição viva.
+**Porquê:** cada ciclo fica com um snapshot imutável de critérios do princípio ao fim. Como
+`OverheadCriteria` é um `data class` passado por valor ao `ObserveSkyUseCase` (AD-009), é
+**estruturalmente impossível** uma lista com critérios misturados dentro de um ciclo: o FR-017 fica
+garantido pela forma dos dados e não por cancelamento — não há nada para alguém se lembrar de fazer.
+Fecha a promessa da AD-009 por outro caminho: essa dizia que "é o ViewModel que alimenta o
+parâmetro", mas nessa altura o laço ainda vivia no `MainViewModel`; depois da AD-011 o laço é da
+sessão, e é a sessão que pergunta.
+**Rejeitadas:** `collectLatest` sobre o fluxo de preferências, que cancelaria uma chamada de rede em
+curso sem desfazer o crédito já gasto — conta-se no pedido, não na resposta — e acrescentaria uma
+segunda forma de interromper o laço ao lado do canal conflado que a AD-008 centralizou; o
+`MainViewModel` a entregar os critérios, que tornaria a sessão dependente de qual ecrã está vivo
+primeiro para um dado que não é de ecrã nenhum.
+**Consequência:** a sessão ganha uma leitura local por ciclo. É memória depois do primeiro arranque,
+não rede, mas o primeiro ciclo paga uma leitura de disco no caminho do arranque.
+
+### AD-019 — Quem altera critérios acorda o laço; unidades não
+Depois de uma alteração de raio, ângulo ou altitude, o `SettingsViewModel` chama
+`skySession.requestRefresh()` — o mesmo método que o `MainViewModel` usa na transição para
+`Granted`. Unidades **não** o chamam.
+**Porquê:** o SC-001 só exige refletir "em menos de um ciclo", por isso acordar mais cedo é cortesia
+sobre uma garantia que já existe, e retira-se sem violar a especificação se der problemas. O canal
+já é conflado: arrastar um controlo não gasta mais do que um pedido. Unidades não afetam a deteção —
+pedir dados por causa delas gastaria um crédito para obter as mesmas aeronaves.
+**Consequência aceite, pré-existente:** um ajuste durante um recuo por 429 volta a tentar antes do
+`retryAfter`. O botão manual já tinha esse comportamento desde a 001; esta feature alarga-lhe a
+porta sem o criar. Candidato a refinamento futuro — distinguir "pedido explícito" de "aviso de
+mudança" — e não bloqueia nada.
+**Armadilha:** `SkySettings.refreshIntervalMinutes` pertence ao `SkyRefreshWorker` (AD-003, mínimo
+15 min), **não** ao laço de 30 s desta sessão. Está na mesma classe e é fácil de confundir; o FR-015
+proíbe ligar-lhe um controlo nesta feature.
+
+### AD-020 — A unidade de apresentação viaja no estado do ecrã, não por `CompositionLocal`
+As funções de `FlightFormatting` ganham um parâmetro de unidade e continuam puras, estáticas e
+testáveis na JVM. Cada `UiState` combina as preferências para os dois enums, como o `MainViewModel`
+já combina permissão e observação.
+**Porquê:** um `CompositionLocal` seria um segundo canal de estado implícito ao lado do `UiState`,
+contra a convenção já escrita neste documento — a UI nunca compõe estado a partir de vários flows
+soltos. Passar a unidade pelo estado que os composables já leem não acrescenta mecanismo nenhum.
+
+### AD-021 — Os limites são geométricos, não orçamentais; a incoerência avisa-se
+Os limites de cada valor derivam da utilidade geométrica, não do orçamento — apurou-se que qualquer
+raio utilizável custa 1 crédito e o orçamento não depende das preferências. A relação raio×ângulo
+mínimo **não estreita** o intervalo de nenhum controlo: aparece como texto explicativo, calculado ao
+vivo pela inversa da função de elevação que já existe no `GeoCalculator`.
+**Porquê:** bloquear obrigaria o limite de um controlo a mover-se quando se toca no outro — um
+cursor cujo topo se desloca debaixo do dedo — e tornaria "valor de origem" um sítio móvel. O FR-009
+é sobre um controlo não aceitar valores fora do **seu próprio** limite, não sobre dois controlos se
+restringirem. E derivar um do outro esconderia, em nome de ajudar, o efeito que o FR-011 existe para
+explicar.
+**Consequência:** a premissa do acoplamento assume um teto de altitude típico, e há tráfego
+executivo que voa acima dele. Serve para informar, nunca para impedir uma escolha legítima.
+
+### AD-022 — A degradação de valores fora do intervalo vive no domínio, aplicada em toda leitura
+`SkySettings` ganha `coerced()`, função pura ao lado dos `DEFAULT_*`. O `SettingsRepositoryImpl`
+aplica-a a **toda** leitura do DataStore, não numa migração pontual.
+**Porquê:** um único ponto de verdade para os limites, consumido por três sítios sem os redefinir —
+o intervalo do controlo (FR-009), a degradação de um valor guardado inválido (FR-008) e a frase
+explicativa (FR-011). E aplicar em cada leitura responde de graça a "o que acontece quando os
+limites mudarem": nada é versionado nem migrado, o valor antigo é corrigido sempre que é lido.
+
 ## Estrutura de pastas
 
 ```
