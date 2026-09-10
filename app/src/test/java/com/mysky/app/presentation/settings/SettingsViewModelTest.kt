@@ -179,6 +179,23 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `o estado inicial nao avisa contra os valores de origem`() = runTest(mainDispatcherRule.testContext) {
+        // O defeito que a revisão encontrou: o aviso aparecia a 100% dos utilizadores ao abrir as
+        // definições pela primeira vez, sobre uma escolha que nunca fizeram. Nenhum teste o cobria
+        // porque o do alcance passava um raio que não era o de origem.
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            val inicial = awaitItemWhere { it.settings == SkySettings() }
+            assertFalse(
+                "os valores de fábrica não podem avisar contra si mesmos",
+                inicial.radiusExceedsUsefulRange,
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `o estado avisa quando o raio excede o alcance util do angulo`() =
         runTest(mainDispatcherRule.testContext) {
             // O caso que o utilizador não tem como descobrir sozinho: raio no máximo com o ângulo de

@@ -70,16 +70,27 @@ O `GeoCalculator` já calcula o ângulo de elevação a partir da altitude e da 
 alcanceUtilMetros(anguloMinimoGraus, altitudeTetoMetros) = altitude / tan(angulo)
 ```
 
-| Ângulo mínimo | Alcance útil (teto de 12 km) |
+| Ângulo mínimo | Alcance útil (teto de 14 km) |
 |---|---|
-| 5° | 137 km |
-| 15° | 45 km |
-| **25°** *(origem)* | **26 km** |
-| 45° | 12 km |
+| 5° | 160 km |
+| 15° | 52 km |
+| **25°** *(origem)* | **30 km** |
+| 45° | 14 km |
 
-**É uma aproximação, e é assim que tem de ser lida.** Assume um teto de altitude típico; há tráfego
-executivo que voa bem mais alto e para o qual a conta dá outro resultado. Serve para informar o
-utilizador (FR-014), nunca para lhe impedir uma escolha (AD-021).
+**O teto são 14 km, e é o mesmo de que a tabela acima deriva o raio máximo.** Esta tabela assumia
+12 km enquanto a dos limites assumia 14 km, e essa divergência de um único número tinha uma
+consequência que nenhuma das duas tabelas mostrava: com 12 km, o alcance útil a 25° dava 26 km, ficava
+abaixo do raio de origem de 30 km, e **o aviso aparecia a todos os utilizadores no primeiro arranque**,
+sobre valores que eles nunca escolheram. Corrigido a 2026-09-10, depois de a revisão da feature o
+apanhar.
+
+**Porque é o teto e não a altitude típica:** o aviso afirma que *nenhum* avião novo aparece. Uma
+afirmação universal só é verdadeira se for verificada no caso mais favorável a haver um. Medido contra
+os 12 km típicos, o aviso diria "não traz aviões novos" enquanto o tráfego a 14 km continuava a
+aparecer até aos 30 km — aritmética certa, céu errado.
+
+**Continua a ser uma aproximação, e é assim que tem de ser lida.** Assume que a aeronave está em
+cruzeiro. Serve para informar o utilizador (FR-014), nunca para lhe impedir uma escolha (AD-021).
 
 ---
 

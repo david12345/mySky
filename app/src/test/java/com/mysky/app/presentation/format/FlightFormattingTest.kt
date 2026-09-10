@@ -178,6 +178,24 @@ class FlightFormattingTest {
     }
 
     @Test
+    fun `a razao de subida segue a unidade de altitude e nao a de distancia`() {
+        // O defeito que a revisão encontrou: a altitude saía em pés e a razão de subida continuava em
+        // m/s, no mesmo painel do ecrã de detalhe. É a mistura de unidades que o SC-006 proíbe, e
+        // escapou porque a velocidade horizontal foi tratada e a vertical ficou de fora.
+        //
+        // 5 m/s = 984 ft/min, que é a convenção da aviação — quem lê pés espera pés por minuto.
+        assertEquals("984", FlightFormatting.verticalRate(5.0, AltitudeUnit.FEET, pt))
+        assertEquals("5,0", FlightFormatting.verticalRate(5.0, AltitudeUnit.METERS, pt))
+    }
+
+    @Test
+    fun `a razao de subida em pes por minuto nao leva casas decimais`() {
+        // 1024 ft/min não fica mais informativo com uma vírgula; 5,2 m/s fica.
+        assertEquals("205", FlightFormatting.verticalRate(1.04, AltitudeUnit.FEET, pt))
+        assertEquals("1,0", FlightFormatting.verticalRate(1.04, AltitudeUnit.METERS, pt))
+    }
+
+    @Test
     fun `sem unidade indicada valem as de origem`() {
         // Os valores por omissão são os que estavam fixos no código antes desta feature — é o que
         // faz os testes anteriores continuarem a provar o mesmo.
@@ -188,6 +206,10 @@ class FlightFormattingTest {
         assertEquals(
             FlightFormatting.altitude(10_400.0, AltitudeUnit.METERS, pt),
             FlightFormatting.altitude(10_400.0, locale = pt),
+        )
+        assertEquals(
+            FlightFormatting.verticalRate(5.0, AltitudeUnit.METERS, pt),
+            FlightFormatting.verticalRate(5.0, locale = pt),
         )
     }
 }

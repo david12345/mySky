@@ -1,6 +1,5 @@
 package com.mysky.app.data.settings
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.IOException
 import androidx.datastore.preferences.core.Preferences
@@ -8,7 +7,6 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.mysky.app.domain.model.AltitudeUnit
 import com.mysky.app.domain.model.DistanceUnit
 import com.mysky.app.domain.model.SkySettings
@@ -19,10 +17,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 
-internal val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "mysky_settings",
-)
+// Aqui existia um `Context.settingsDataStore by preferencesDataStore(name = "mysky_settings")`, resto
+// do esqueleto anterior ao `SettingsModule`. Ninguém o usava, mas apontava para o **mesmo ficheiro**
+// que o `DataStore` fornecido pelo Hilt: bastava alguém aceitá-lo do autocomplete para o DataStore
+// lançar `IllegalStateException: There are multiple DataStores active for the same file`. Um único
+// ponto de criação, e é o `SettingsModule`.
 
 /**
  * As preferências do utilizador, em DataStore.
@@ -43,8 +44,15 @@ class SettingsRepositoryImpl @Inject constructor(
 ) : SettingsRepository {
 
     override val settings: Flow<SkySettings> = store.data
-        // `IOException` é o que o DataStore lança quando não consegue ler ou desserializar. Sem
-        // isto, um ficheiro corrompido propagaria a exceção até ao laço de atualização.
+        // Uma falha de I/O transitória volta a tentar antes de desistir. Sem isto, o `catch` abaixo
+        // resolvia o arranque e criava um problema pior a meio da sessão: `Flow.catch` emite o valor
+        // de recurso e **termina a coleção**. Os `uiState` dos três ecrãs subscrevem isto durante
+        // toda a vida do ecrã, por isso uma falha passageira deixava-os presos nos valores de fábrica
+        // para sempre, a ignorar em silêncio tudo o que o utilizador gravasse a seguir.
+        .retryWhen { cause, attempt -> cause is IOException && attempt < READ_RETRIES }
+        // Esgotadas as tentativas, valem os valores de origem. `IOException` é o que o DataStore lança
+        // quando não consegue ler ou desserializar; sem isto, um ficheiro corrompido propagaria a
+        // exceção até ao laço de atualização.
         .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
         .map { preferences -> preferences.toSettings().coerced() }
 
@@ -98,6 +106,14 @@ class SettingsRepositoryImpl @Inject constructor(
         stored?.let { name -> runCatching { enumValueOf<T>(name) }.getOrNull() } ?: default
 
     private companion object {
+        /**
+         * Quantas vezes uma leitura falhada volta a ser tentada antes de valerem os valores de origem.
+         *
+         * Três, e com um limite em vez de sem limite: um ficheiro permanentemente ilegível faria um
+         * `retry` infinito girar sem nunca deixar o ecrã aparecer.
+         */
+        const val READ_RETRIES = 3L
+
         val RADIUS = doublePreferencesKey("detection_radius_meters")
         val MIN_ELEVATION = doublePreferencesKey("min_elevation_degrees")
         val MIN_ALTITUDE = doublePreferencesKey("min_altitude_meters")

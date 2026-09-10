@@ -205,6 +205,12 @@ publicada. Com `latest`, a primeira release de aplicação (com o APK e sem a ta
 mais recente, o `routes.bin` deixaria de existir nesse URL e a atualização partia-se, com o
 utilizador a ver "não foi possível chegar ao servidor" sem pista nenhuma da causa. Releases de
 aplicação e de dados não têm relação uma com a outra e não podem partilhar um ponteiro.
+**Nem o ponteiro implícito:** a release de dados **não pode ficar marcada como `Latest`** no GitHub, e
+nenhum link para descarregar o APK pode apontar para `releases/latest`. Marcada, ela é o que
+`releases/latest` resolve — e o botão "Descarregar o APK" da página do produto entregava um binário de
+7,6 MB de tabela de rotas a quem quisesse instalar a app. Os links apontam para a tag da versão e para
+o ficheiro, sempre. Verificado a 2026-09-10: era exatamente isso que a página fazia antes de a primeira
+release existir.
 **Consequência:** a app usa o ficheiro de `filesDir` se existir e validar, senão lê o asset
 diretamente do APK — **nunca copia o asset só para ter tabela**, para não pôr 7,6 MB de I/O no
 caminho do primeiro arranque. A atualização real só existe quando alguém volta a correr o script e
@@ -460,5 +466,66 @@ decisão de 2026-09-08: o valor de antes nunca foi medido e os 7,6 MB já entrar
 cronometrar o arranque agora, não para provar nada sobre esta feature, mas para dar a linha de base
 que falta à seguinte. O mesmo se aplica à cobertura da tabela de operadores (SC-004 da 001).
 
-**Feature seguinte:** `004-settings` (raio, elevação mínima, unidades — desbloqueia o
-`SettingsRepositoryImpl` e fecha a promessa da AD-009) ou o widget, como previsto na AD-003.
+**`004-settings` implementada.** O utilizador ajusta o raio de deteção, o ângulo mínimo acima do
+horizonte e a altitude mínima, e escolhe as unidades de distância e de altitude. As escolhas
+persistem, aplicam-se sem reiniciar, e nenhuma combinação permitida parte nada.
+
+**286 testes unitários verdes**, lint sem erros. APK de release com 10 MB (o R8 corta de 30).
+
+A revisão desta feature encontrou um defeito que **todos os utilizadores** teriam visto no primeiro
+arranque: o aviso "aumentar o raio não traz aviões novos" acendia com os valores de fábrica, sobre uma
+escolha que ninguém tinha feito. A causa era um único número escrito de duas maneiras — o teto de
+altitude era 14 km na conta que deriva o raio máximo e 12 km na que produz o aviso — e o teste que
+devia ter apanhado isto chamava-se "o raio de origem cabe no alcance útil" e passava 25 km, quando o
+raio de origem são 30 km. O nome afirmava o que o teste nunca verificava.
+
+A correção não foi alinhar os números pelo valor conveniente: o aviso afirma que *nenhum* avião novo
+aparece, e uma afirmação universal só é verdadeira se for medida no caso mais favorável a haver um —
+o **teto** de altitude, nunca a altitude típica. Medido contra os 12 km típicos, o aviso dizia "não traz
+aviões novos" enquanto o tráfego a 14 km continuava a aparecer até aos 30 km: aritmética certa, céu
+errado. Os testes novos foram verificados a falhar contra o teto antigo.
+
+Fecha a promessa que a AD-009 deixou aberta na primeira feature: os critérios deixam de estar fixos
+no código. A `SkySession` lê-os no início de cada ciclo (AD-018) e passa-os por valor ao caso de uso,
+o que torna uma lista com critérios misturados **estruturalmente impossível** — não há nada para
+alguém se lembrar de fazer. E os 232 testes anteriores passaram sem alteração de comportamento,
+porque os valores de origem são exatamente os que estavam fixos no código.
+
+Uma investigação desta feature **desmentiu um requisito da sua própria especificação**: o orçamento
+de consultas não depende do raio. O custo é determinado pela área da caixa envolvente, e qualquer
+raio utilizável — até ~246 km — fica no primeiro degrau. O teto real da app, que nunca esteve escrito
+em lado nenhum, são cerca de **3h20m de ecrã aberto por dia**, e nenhuma definição o altera.
+
+## Primeira release
+
+**v1.0.0**, com APK assinado. A chave vive em `~/.mysky/mysky-release.jks`, fora do repositório, e as
+credenciais em `keystore.properties`, que o `.gitignore` exclui. **Perder essa chave significa nunca
+mais poder publicar uma atualização sob a mesma identidade.**
+
+Página do produto em `docs/`, servida pelo GitHub Pages, com a atribuição que a ODbL do OpenFlights
+exige.
+
+**O que a app tem, ao todo:** lista dos aviões no céu com companhia e rota, detalhe de cada aeronave
+que se atualiza sozinho, tabela de rotas atualizável, e definições de deteção e unidades.
+
+**Continuam por implementar**, como esqueleto com `TODO(feature/...)`: widget (Glance),
+`SkyRefreshWorker`/`SkyWorkScheduler`, notificações, e o histórico de avistamentos em Room.
+
+## Dívida conhecida, por ordem de importância
+
+**O APK de release nunca correu num aparelho.** É a lacuna mais séria. Os 278 testes, o lint e a
+inspeção do R8 dão boa evidência — o serializer dos DTO manteve o nome, Hilt e DataStore estão
+presentes — mas nada disso prova que a app arranca depois de minificada. Se falhar, o
+`app/build/outputs/mapping/release/mapping.txt` desofusca o relatório.
+
+**A 003 também nunca foi validada em dispositivo**, e é a única das quatro em que isso aconteceu.
+Corrigiram-se-lhe três defeitos críticos que os testes tinham deixado passar, incluindo duas consultas
+concorrentes a devolverem a rota de outro voo. O guião está em
+`specs/003-flight-route/quickstart.md`, secções 6 a 9.
+
+**Três números nunca medidos:** mediana do arranque, cobertura real das rotas (SC-001 da 003, ≥70%) e
+cobertura da tabela de operadores (SC-004 da 001). A mediana foi pedida como primeira tarefa da 004 e
+não foi feita — continua a ser a última oportunidade fácil antes de a app crescer mais.
+
+**Feature seguinte:** o widget (AD-003), que é a razão de ser da app e a maior das que faltam. Vai
+precisar do `SkyRefreshWorker` e do `SkyWorkScheduler`, ambos em esqueleto desde o início.

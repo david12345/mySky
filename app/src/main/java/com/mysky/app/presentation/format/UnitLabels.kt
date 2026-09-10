@@ -34,4 +34,11 @@ object UnitLabels {
         DistanceUnit.KILOMETERS -> R.string.flight_speed_kmh
         DistanceUnit.MILES -> R.string.flight_speed_mph
     }
+
+    /** A razão de subida segue a **altitude**: é a mesma grandeza, por unidade de tempo. */
+    @StringRes
+    fun verticalRate(unit: AltitudeUnit): Int = when (unit) {
+        AltitudeUnit.METERS -> R.string.flight_vertical_rate_ms
+        AltitudeUnit.FEET -> R.string.flight_vertical_rate_ftmin
+    }
 }

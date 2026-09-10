@@ -60,9 +60,26 @@ class GeoCalculator @Inject constructor() {
      * Aproximação de terra plana: `atan(altitude / distância horizontal)`. Diretamente por cima
      * (distância 0) devolve 90.
      *
-     * TODO(geo): considerar a curvatura da Terra — a ~50 km o horizonte "cai" cerca de 196 m
-     *  (d²/2R), o que sobrestima ligeiramente a elevação em aviões distantes e baixos.
-     *  Só vale a pena se o raio de deteção configurável passar a permitir valores altos.
+     * TODO(geo): considerar a curvatura da Terra. **A condição que adiava isto deixou de valer** — a
+     *  `004-settings` tornou o raio configurável até 150 km, que era exatamente o gatilho escrito aqui.
+     *  Medido a 2026-09-11, para uma aeronave a 12 km, o erro de sobrestimação da elevação:
+     *
+     *  | Distância | Queda do horizonte (d²/2R) | Erro na elevação |
+     *  |---|---|---|
+     *  | 30 km *(raio de origem)* | 71 m | 0,12° |
+     *  | 60 km | 283 m | 0,26° |
+     *  | 100 km | 785 m | 0,44° |
+     *  | 150 km *(raio máximo)* | 1 766 m | 0,67° |
+     *
+     *  Fica adiado ainda assim, e por uma razão melhor do que a anterior: **corrigir só a curvatura
+     *  não é claramente mais correto.** A refração atmosférica curva a linha de vista no sentido
+     *  oposto e cancela cerca de 15% do efeito — a prática usual é um raio da Terra efetivo (≈7/6 R)
+     *  em vez do geométrico. Subtrair `d²/2R` a seco corrigia o sinal e passava ao lado da magnitude.
+     *  Escolher o modelo é decisão para o `architect`, não remendo de véspera de release.
+     *
+     *  Consequência de ficar como está: uma aeronave a menos de 0,7° abaixo do ângulo mínimo pode
+     *  entrar na lista aos raios maiores. No raio de origem são 0,12°, indistinguível para quem olha
+     *  para o céu.
      */
     fun elevationDegrees(horizontalDistanceMeters: Double, altitudeMeters: Double): Double {
         if (altitudeMeters <= 0.0) return 0.0

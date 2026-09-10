@@ -94,9 +94,27 @@ object FlightFormatting {
         else -> VerticalMovement.Level
     }
 
-    /** Magnitude da subida ou descida, já sem sinal: o sentido vem da variante, não do número. */
-    fun verticalRateMetersPerSecond(metersPerSecond: Double, locale: Locale = Locale.getDefault()): String =
-        decimalFormat(locale).format(metersPerSecond)
+    /**
+     * Magnitude da subida ou descida, já sem sinal: o sentido vem da variante, não do número.
+     *
+     * **Segue a unidade de altitude**, e não a de distância como a velocidade horizontal — é a mesma
+     * grandeza que a altitude, medida por unidade de tempo. Quem lê a altitude em pés espera a razão
+     * de subida em **pés por minuto**, que é a convenção da aviação; um valor em m/s ao lado de uma
+     * altitude em pés, no mesmo painel, é exatamente a mistura que o SC-006 proíbe.
+     *
+     * A casa decimal só existe em m/s: 5,2 m/s diz algo, e 1024 ft/min não precisa de vírgula nenhuma
+     * para dizer o mesmo.
+     */
+    fun verticalRate(
+        metersPerSecond: Double,
+        unit: AltitudeUnit = AltitudeUnit.METERS,
+        locale: Locale = Locale.getDefault(),
+    ): String = when (unit) {
+        AltitudeUnit.METERS -> decimalFormat(locale).format(metersPerSecond)
+        AltitudeUnit.FEET -> integerFormat(locale).format(
+            metersPerSecond * SECONDS_PER_MINUTE / METERS_PER_FOOT,
+        )
+    }
 
     /** `null` no zénite: quem apresenta mostra "mesmo por cima" em vez de um rumo (FR-014). */
     fun compassPointOrNull(bearingDegrees: Double, elevationDegrees: Double): CompassPoint? =

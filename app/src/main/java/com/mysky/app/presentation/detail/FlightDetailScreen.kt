@@ -165,7 +165,10 @@ private fun FlightDetail(
             Field(stringResource(R.string.detail_heading), stringResource(FlightFormatting.compassPointOf(it).labelRes))
         }
         flight.aircraft.verticalRateMetersPerSecond?.let {
-            Field(stringResource(R.string.detail_vertical_rate), verticalMovementText(it))
+            Field(
+                stringResource(R.string.detail_vertical_rate),
+                verticalMovementText(it, state.altitudeUnit),
+            )
         }
 
         Section(stringResource(R.string.detail_section_observer))
@@ -234,18 +237,25 @@ private fun BearingField(flight: OverheadFlight) {
 }
 
 @Composable
-private fun verticalMovementText(metersPerSecond: Double): String =
+private fun verticalMovementText(metersPerSecond: Double, unit: AltitudeUnit): String =
     when (val movement = FlightFormatting.verticalMovementOf(metersPerSecond)) {
         is VerticalMovement.Climbing -> stringResource(
             R.string.detail_climbing,
-            FlightFormatting.verticalRateMetersPerSecond(movement.metersPerSecond),
+            verticalRateText(movement.metersPerSecond, unit),
         )
         is VerticalMovement.Descending -> stringResource(
             R.string.detail_descending,
-            FlightFormatting.verticalRateMetersPerSecond(movement.metersPerSecond),
+            verticalRateText(movement.metersPerSecond, unit),
         )
         VerticalMovement.Level -> stringResource(R.string.detail_level)
     }
+
+/** O número com a sua unidade, para o "a subir" e o "a descer" não a repetirem cada um. */
+@Composable
+private fun verticalRateText(metersPerSecond: Double, unit: AltitudeUnit): String = stringResource(
+    UnitLabels.verticalRate(unit),
+    FlightFormatting.verticalRate(metersPerSecond, unit),
+)
 
 @Composable
 private fun flightTitle(flight: OverheadFlight): String =

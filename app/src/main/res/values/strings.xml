@@ -85,8 +85,10 @@
     <string name="detail_speed">Velocidade</string>
     <string name="detail_heading">Rumo da aeronave</string>
     <string name="detail_vertical_rate">Subida / descida</string>
-    <string name="detail_climbing">a subir %1$s m/s</string>
-    <string name="detail_descending">a descer %1$s m/s</string>
+    <string name="detail_climbing">a subir %1$s</string>
+    <string name="detail_descending">a descer %1$s</string>
+    <string name="flight_vertical_rate_ms">%1$s m/s</string>
+    <string name="flight_vertical_rate_ftmin">%1$s ft/min</string>
     <string name="detail_level">nivelado</string>
     <string name="detail_distance">Distância</string>
     <string name="detail_bearing">Direção a olhar</string>
@@ -129,6 +131,6 @@
     <string name="settings_unit_feet">Pés</string>
     <string name="settings_at_default">de origem</string>
     <string name="settings_reset">Repor valores de origem</string>
-    <string name="settings_range_warning">Com este ângulo só se vê até %1$s. Aumentar o raio além disso não traz aviões novos.</string>
+    <string name="settings_range_warning">Com este ângulo, mesmo o tráfego mais alto só se vê até %1$s. Aumentar o raio além disso não traz aviões novos.</string>
     <string name="settings_degrees">%1$s°</string>
 </resources>

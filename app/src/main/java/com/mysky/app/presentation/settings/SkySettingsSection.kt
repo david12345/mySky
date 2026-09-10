@@ -120,6 +120,13 @@ private fun SettingSlider(
     onValueSettled: (Double) -> Unit,
 ) {
     // O valor em trânsito vive aqui, no controlo, e só sai daqui quando o dedo levanta.
+    //
+    // O `remember(value)` reinicia o cursor quando o valor gravado muda, e é isso que faz "repor
+    // valores de origem" e a correção por `coerced()` aparecerem no cursor sem código extra. O preço:
+    // se o valor gravado mudar **enquanto** o dedo ainda está no cursor, ele salta. Na prática exige
+    // multitoque — arrastar aqui e tocar em "repor" ao mesmo tempo — e o resultado é o valor correto,
+    // só com um salto visível. Anotado em vez de resolvido: guardar o valor em trânsito através de uma
+    // reposição pedida pelo utilizador dava um cursor a discordar do que está gravado, que é pior.
     var inFlight by remember(value) { mutableFloatStateOf(value.toFloat()) }
 
     Column(modifier = Modifier.padding(vertical = 8.dp)) {

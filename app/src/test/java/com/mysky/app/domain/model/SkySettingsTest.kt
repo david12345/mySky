@@ -109,4 +109,25 @@ class SkySettingsTest {
         assertEquals(10.0, criteria.minElevationDegrees, 0.001)
         assertEquals(500.0, criteria.minAltitudeMeters, 0.001)
     }
+
+    @Test
+    fun `os valores exatamente na fronteira passam intactos`() {
+        // Os intervalos são inclusivos, e é o que faz o cursor no extremo gravar o extremo em vez de
+        // um valor um passo atrás. Testado nas seis fronteiras porque `coerceIn` inclusivo é uma
+        // escolha, não uma inevitabilidade: um `coerceIn` exclusivo daria um cursor que nunca chega ao
+        // fim do seu próprio trilho.
+        val minimos = SkySettings(
+            detectionRadiusMeters = SkySettings.RADIUS_RANGE.start,
+            minElevationDegrees = SkySettings.MIN_ELEVATION_RANGE.start,
+            minAltitudeMeters = SkySettings.MIN_ALTITUDE_RANGE.start,
+        )
+        val maximos = SkySettings(
+            detectionRadiusMeters = SkySettings.RADIUS_RANGE.endInclusive,
+            minElevationDegrees = SkySettings.MIN_ELEVATION_RANGE.endInclusive,
+            minAltitudeMeters = SkySettings.MIN_ALTITUDE_RANGE.endInclusive,
+        )
+
+        assertEquals(minimos, minimos.coerced())
+        assertEquals(maximos, maximos.coerced())
+    }
 }

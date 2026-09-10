@@ -14,21 +14,22 @@ import org.junit.Test
 class SkyRangeTest {
 
     @Test
-    fun `o alcance util a vinte e cinco graus e cerca de vinte e seis quilometros`() {
-        // É o valor de origem, e o que explica por que razão o raio de 30 km já é generoso.
-        assertEquals(25_700.0, SkyRange.usefulRangeMeters(25.0), 200.0)
+    fun `o alcance util a vinte e cinco graus e cerca de trinta quilometros`() {
+        // É o ângulo de origem, e explica por que razão o raio de origem é de 30 km: é exatamente o
+        // ponto onde o tráfego mais alto deixa de clarear 25°.
+        assertEquals(30_000.0, SkyRange.usefulRangeMeters(25.0), 200.0)
     }
 
     @Test
     fun `baixar o angulo alarga muito o alcance util`() {
-        assertEquals(137_200.0, SkyRange.usefulRangeMeters(5.0), 500.0)
-        assertEquals(44_800.0, SkyRange.usefulRangeMeters(15.0), 300.0)
+        assertEquals(160_000.0, SkyRange.usefulRangeMeters(5.0), 500.0)
+        assertEquals(52_200.0, SkyRange.usefulRangeMeters(15.0), 300.0)
     }
 
     @Test
     fun `subir o angulo encurta-o depressa`() {
-        assertEquals(12_000.0, SkyRange.usefulRangeMeters(45.0), 100.0)
-        assertEquals(6_900.0, SkyRange.usefulRangeMeters(60.0), 100.0)
+        assertEquals(14_000.0, SkyRange.usefulRangeMeters(45.0), 100.0)
+        assertEquals(8_100.0, SkyRange.usefulRangeMeters(60.0), 100.0)
     }
 
     @Test
@@ -53,12 +54,54 @@ class SkyRangeTest {
         assertTrue("$executivo devia ser maior que $comercial", executivo > comercial)
     }
 
+    @Test
+    fun `a conta assume o teto de altitude e nao a altitude tipica`() {
+        // O aviso afirma que **nenhum** avião novo aparece. Medido contra os 12 km típicos, o alcance
+        // dava ~26 km e a afirmação era falsa para o tráfego a 14 km, que se vê até aos 30 km.
+        assertEquals(14_000.0, SkyRange.HIGH_CRUISE_ALTITUDE_METERS, 0.0)
+        assertEquals(
+            SkyRange.usefulRangeMeters(25.0, altitudeMeters = SkyRange.HIGH_CRUISE_ALTITUDE_METERS),
+            SkyRange.usefulRangeMeters(25.0),
+            0.001,
+        )
+    }
+
     // --- A incoerência que o ecrã tem de avisar -------------------------------------------------
 
     @Test
-    fun `o raio de origem cabe no alcance util do angulo de origem`() {
-        // 30 km contra ~26 km: ligeiramente generoso, e é o comportamento de hoje. Não deve avisar.
-        assertFalse(SkyRange.radiusExceedsUsefulRange(radiusMeters = 25_000.0, minElevationDegrees = 25.0))
+    fun `os valores de origem nunca acendem o aviso`() {
+        // O teste que faltava, e que estava escrito de forma a não poder falhar: o nome dizia "raio de
+        // origem" e passava 25 000, quando o valor de origem são 30 000. Com o teto errado (12 km) o
+        // aviso aparecia a **todos** os utilizadores no primeiro arranque, sobre uma escolha que nunca
+        // fizeram.
+        //
+        // Os valores vêm de `SkySettings()` e não escritos à mão: se algum deles mudar, é este teste
+        // que tem de ser olhado outra vez, em vez de continuar a passar sobre números que já ninguém
+        // usa.
+        val origem = SkySettings()
+
+        assertFalse(
+            "os valores de fábrica não podem avisar contra si mesmos",
+            SkyRange.radiusExceedsUsefulRange(
+                radiusMeters = origem.detectionRadiusMeters,
+                minElevationDegrees = origem.minElevationDegrees,
+            ),
+        )
+    }
+
+    @Test
+    fun `o raio de origem esta no limite do alcance util e nao alem dele`() {
+        // Explicita a folga real, que é pequena: 30 000 contra 30 023. Não é coincidência — o raio de
+        // origem foi escolhido como o alcance útil do ângulo de origem. Fica escrito para que uma
+        // alteração a qualquer um dos dois valores apareça aqui.
+        val origem = SkySettings()
+        val alcance = SkyRange.usefulRangeMeters(origem.minElevationDegrees)
+
+        assertTrue(
+            "o raio de origem ($origem.detectionRadiusMeters) devia caber em $alcance",
+            origem.detectionRadiusMeters <= alcance,
+        )
+        assertEquals(30_023.0, alcance, 1.0)
     }
 
     @Test

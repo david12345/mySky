@@ -3,8 +3,10 @@ package com.mysky.app.data.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.core.IOException
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.mysky.app.domain.model.AltitudeUnit
 import com.mysky.app.domain.model.DistanceUnit
@@ -12,7 +14,9 @@ import com.mysky.app.domain.model.SkySettings
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -176,21 +180,89 @@ class SettingsRepositoryImplTest {
     // --- A reposição ----------------------------------------------------------------------------
 
     @Test
-    fun `repor devolve os criterios ao inicio sem tocar no que e doutras features`() = runTest {
+    fun `repor devolve ao inicio tudo o que esta feature grava`() = runTest {
+        // A revisão apontou que este teste afirmava mais do que verificava: mexia em
+        // `refreshIntervalMinutes` e `notificationsEnabled` e nunca os voltava a olhar.
+        //
+        // Verificá-los aqui teria **falhado**, e por uma razão que vale a pena ficar escrita: este
+        // repositório grava cinco chaves, e nenhuma delas é dessas duas. Os campos das features que
+        // ainda não existem não são persistidos, por isso não há aqui nada para proteger — e passá-los
+        // ao `update` dava a impressão errada de que havia. A invariante de que `withDefaults()` não
+        // toca no que é de outras features vive onde é verdadeira e verificável: em `SkySettingsTest`,
+        // sobre o modelo puro. Quando essas features chegarem e trouxerem chaves, é aqui que a
+        // verificação passa a fazer sentido.
+        //
+        // O que este teste fecha, e antes deixava a meio, é a volta completa das cinco chaves.
         val repository = repository(store())
         repository.update {
             it.copy(
                 detectionRadiusMeters = 120_000.0,
+                minElevationDegrees = 40.0,
+                minAltitudeMeters = 2_000.0,
                 distanceUnit = DistanceUnit.MILES,
-                refreshIntervalMinutes = 45L,
-                notificationsEnabled = true,
+                altitudeUnit = AltitudeUnit.FEET,
             )
         }
 
         repository.update { it.withDefaults() }
 
+        val origem = SkySettings()
         val settings = repository.settings.first()
-        assertEquals(SkySettings().detectionRadiusMeters, settings.detectionRadiusMeters, 0.001)
-        assertEquals(DistanceUnit.KILOMETERS, settings.distanceUnit)
+        assertEquals(origem.detectionRadiusMeters, settings.detectionRadiusMeters, 0.001)
+        assertEquals(origem.minElevationDegrees, settings.minElevationDegrees, 0.001)
+        assertEquals(origem.minAltitudeMeters, settings.minAltitudeMeters, 0.001)
+        assertEquals(origem.distanceUnit, settings.distanceUnit)
+        assertEquals(origem.altitudeUnit, settings.altitudeUnit)
+    }
+
+    // --- Falhas de leitura: tentar outra vez antes de desistir ----------------------------------
+
+    /**
+     * Um `DataStore` que falha as primeiras [failures] coleções e só depois entrega o valor.
+     *
+     * Existe para provar o que nenhum ficheiro real deixa provar de forma determinística: que uma
+     * falha passageira não deixa o ecrã preso nos valores de fábrica.
+     */
+    private class FlakyStore(
+        private val failures: Int,
+        private val preferences: Preferences,
+    ) : DataStore<Preferences> {
+        var attempts = 0
+            private set
+
+        override val data: Flow<Preferences> = flow {
+            attempts++
+            if (attempts <= failures) throw IOException("falha passageira #$attempts")
+            emit(preferences)
+        }
+
+        override suspend fun updateData(
+            transform: suspend (Preferences) -> Preferences,
+        ): Preferences = throw UnsupportedOperationException("não é o que este teste verifica")
+    }
+
+    @Test
+    fun `uma falha passageira de leitura volta a ser tentada`() = runTest {
+        val guardado = mutablePreferencesOf().apply {
+            this[doublePreferencesKey("detection_radius_meters")] = 90_000.0
+        }
+        val store = FlakyStore(failures = 2, preferences = guardado)
+
+        val settings = SettingsRepositoryImpl(store).settings.first()
+
+        assertEquals("o valor gravado devia sobreviver a duas falhas", 90_000.0, settings.detectionRadiusMeters, 0.001)
+        assertEquals(3, store.attempts)
+    }
+
+    @Test
+    fun `uma leitura sempre falhada acaba nos valores de origem em vez de girar para sempre`() = runTest {
+        // O limite de tentativas é o que distingue degradar de pendurar: sem ele, um ficheiro
+        // permanentemente ilegível fazia o `retry` girar e o ecrã nunca aparecia.
+        val store = FlakyStore(failures = Int.MAX_VALUE, preferences = mutablePreferencesOf())
+
+        val settings = SettingsRepositoryImpl(store).settings.first()
+
+        assertEquals(SkySettings(), settings)
+        assertEquals("três tentativas depois da primeira leitura", 4, store.attempts)
     }
 }
