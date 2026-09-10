@@ -10,6 +10,7 @@ import com.mysky.app.domain.usecase.ObserveSkyUseCase
 import com.mysky.app.overheadFlight
 import com.mysky.app.aircraft
 import com.mysky.app.presentation.sky.LoadPhase
+import com.mysky.app.presentation.sky.FakeSettingsRepository
 import com.mysky.app.presentation.sky.skySession
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -51,6 +52,7 @@ class MainViewModelTest {
     private fun viewModel() = MainViewModel(
         skySession(observeSky, locationRepository, testDispatcher, timeProvider),
         locationRepository,
+        FakeSettingsRepository(),
     )
 
     @Test

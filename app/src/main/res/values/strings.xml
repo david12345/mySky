@@ -42,9 +42,14 @@
     <string name="sky_updated_just_now">agora mesmo</string>
 
     <!-- Entrada da lista: cada grandeza com a sua unidade (FR-015). -->
+    <!-- Uma string por unidade: o símbolo pertence ao recurso, e é lá que fica quando a app for
+         traduzida. Escolher entre elas é do ecrã, a partir da preferência que recebe no estado. -->
     <string name="flight_distance_km">%1$s km</string>
+    <string name="flight_distance_mi">%1$s mi</string>
     <string name="flight_altitude_meters">%1$s m</string>
+    <string name="flight_altitude_feet">%1$s ft</string>
     <string name="flight_speed_kmh">%1$s km/h</string>
+    <string name="flight_speed_mph">%1$s mph</string>
     <string name="flight_elevation_degrees">%1$s°</string>
     <!-- Acima de 85° de elevação o rumo deixa de ter significado. -->
     <string name="flight_overhead">mesmo por cima</string>
@@ -107,4 +112,23 @@
     <string name="settings_routes_error_unreachable">Não foi possível chegar ao servidor. A tabela em uso mantém-se.</string>
     <string name="settings_routes_error_invalid">Os dados recebidos não são válidos. A tabela em uso mantém-se.</string>
     <string name="settings_routes_error_unexpected">A atualização não foi concluída. A tabela em uso mantém-se.</string>
+    <!-- Definições de deteção (004-settings). -->
+    <string name="settings_sky_title">O meu céu</string>
+    <string name="settings_radius">Raio de deteção</string>
+    <string name="settings_radius_help">Até que distância a app procura aviões à tua volta.</string>
+    <string name="settings_min_elevation">Ângulo mínimo</string>
+    <string name="settings_min_elevation_help">Quão alto no céu um avião tem de estar para contar. Mais alto mostra só os que passam quase por cima.</string>
+    <string name="settings_min_altitude">Altitude mínima</string>
+    <string name="settings_min_altitude_help">Abaixo desta altitude o avião é ignorado. Baixar deixa entrar helicópteros e tráfego local.</string>
+    <string name="settings_units_title">Unidades</string>
+    <string name="settings_distance_unit">Distâncias</string>
+    <string name="settings_altitude_unit">Altitudes</string>
+    <string name="settings_unit_kilometers">Quilómetros</string>
+    <string name="settings_unit_miles">Milhas</string>
+    <string name="settings_unit_meters">Metros</string>
+    <string name="settings_unit_feet">Pés</string>
+    <string name="settings_at_default">de origem</string>
+    <string name="settings_reset">Repor valores de origem</string>
+    <string name="settings_range_warning">Com este ângulo só se vê até %1$s. Aumentar o raio além disso não traz aviões novos.</string>
+    <string name="settings_degrees">%1$s°</string>
 </resources>

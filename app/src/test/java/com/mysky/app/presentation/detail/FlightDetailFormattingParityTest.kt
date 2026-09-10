@@ -58,8 +58,8 @@ class FlightDetailFormattingParityTest {
             elevationDegrees = 62.4,
         )
 
-        assertEquals("12,3", FlightFormatting.distanceKm(flight.horizontalDistanceMeters, locale))
-        assertEquals("839", FlightFormatting.speedKmh(flight.aircraft.groundSpeedMetersPerSecond!!, locale))
+        assertEquals("12,3", FlightFormatting.distance(flight.horizontalDistanceMeters, locale = locale))
+        assertEquals("839", FlightFormatting.speed(flight.aircraft.groundSpeedMetersPerSecond!!, locale = locale))
         assertEquals("62", FlightFormatting.elevationDegrees(flight.elevationDegrees, locale))
     }
 

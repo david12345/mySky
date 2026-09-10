@@ -2,6 +2,8 @@ package com.mysky.app.presentation.format
 
 import androidx.annotation.StringRes
 import com.mysky.app.R
+import com.mysky.app.domain.model.AltitudeUnit
+import com.mysky.app.domain.model.DistanceUnit
 import java.math.RoundingMode
 import java.text.NumberFormat
 import java.util.Locale
@@ -19,6 +21,8 @@ import java.util.Locale
 object FlightFormatting {
 
     private const val METERS_PER_KILOMETER = 1_000.0
+    private const val METERS_PER_MILE = 1_609.344
+    private const val METERS_PER_FOOT = 0.3048
     private const val SECONDS_PER_HOUR = 3_600.0
     private const val DEGREES_PER_COMPASS_POINT = 360.0 / 16
 
@@ -28,14 +32,47 @@ object FlightFormatting {
     /** Abaixo desta razão vertical, em m/s, o voo apresenta-se como nivelado (~100 ft/min). */
     const val LEVEL_FLIGHT_THRESHOLD = 0.5
 
-    fun distanceKm(meters: Double, locale: Locale = Locale.getDefault()): String =
-        decimalFormat(locale).format(meters / METERS_PER_KILOMETER)
+    /**
+     * Distância na unidade escolhida pelo utilizador.
+     *
+     * A unidade entra por parâmetro e não por um canal implícito: chega a estas funções dentro do
+     * estado que o ecrã já observa (AD-020), o que as mantém puras e testáveis na JVM sem `Context`.
+     */
+    fun distance(
+        meters: Double,
+        unit: DistanceUnit = DistanceUnit.KILOMETERS,
+        locale: Locale = Locale.getDefault(),
+    ): String = decimalFormat(locale).format(meters / unit.metersPerUnit())
 
-    fun altitudeMeters(meters: Double, locale: Locale = Locale.getDefault()): String =
-        integerFormat(locale).format(meters)
+    fun altitude(
+        meters: Double,
+        unit: AltitudeUnit = AltitudeUnit.METERS,
+        locale: Locale = Locale.getDefault(),
+    ): String = integerFormat(locale).format(meters / unit.metersPerUnit())
 
-    fun speedKmh(metersPerSecond: Double, locale: Locale = Locale.getDefault()): String =
-        integerFormat(locale).format(metersPerSecond * SECONDS_PER_HOUR / METERS_PER_KILOMETER)
+    /**
+     * A velocidade segue a unidade de **distância**: quem lê milhas espera milhas por hora.
+     *
+     * É a única grandeza cuja unidade não tem preferência própria, e derivá-la da distância é o que
+     * evita a mistura que o SC-006 proíbe — km/h ao lado de distâncias em milhas.
+     */
+    fun speed(
+        metersPerSecond: Double,
+        unit: DistanceUnit = DistanceUnit.KILOMETERS,
+        locale: Locale = Locale.getDefault(),
+    ): String = integerFormat(locale).format(
+        metersPerSecond * SECONDS_PER_HOUR / unit.metersPerUnit(),
+    )
+
+    private fun DistanceUnit.metersPerUnit(): Double = when (this) {
+        DistanceUnit.KILOMETERS -> METERS_PER_KILOMETER
+        DistanceUnit.MILES -> METERS_PER_MILE
+    }
+
+    private fun AltitudeUnit.metersPerUnit(): Double = when (this) {
+        AltitudeUnit.METERS -> 1.0
+        AltitudeUnit.FEET -> METERS_PER_FOOT
+    }
 
     fun elevationDegrees(degrees: Double, locale: Locale = Locale.getDefault()): String =
         integerFormat(locale).format(degrees)

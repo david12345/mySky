@@ -14,9 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mysky.app.R
+import com.mysky.app.domain.model.AltitudeUnit
+import com.mysky.app.domain.model.DistanceUnit
 import com.mysky.app.domain.model.OverheadFlight
 import com.mysky.app.presentation.format.FlightFormatting
 import com.mysky.app.presentation.format.RouteFormatting
+import com.mysky.app.presentation.format.UnitLabels
 
 /**
  * Uma aeronave na lista.
@@ -28,6 +31,8 @@ import com.mysky.app.presentation.format.RouteFormatting
 @Composable
 fun FlightRow(
     flight: OverheadFlight,
+    distanceUnit: DistanceUnit,
+    altitudeUnit: AltitudeUnit,
     onClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -75,7 +80,7 @@ fun FlightRow(
         }
 
         Text(
-            text = flight.detailsLine(),
+            text = flight.detailsLine(distanceUnit, altitudeUnit),
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -86,17 +91,20 @@ fun FlightRow(
  * Montar a linha a partir das partes que existem evita os "— · —" que sobram de campos vazios.
  */
 @Composable
-private fun OverheadFlight.detailsLine(): String = buildList {
+private fun OverheadFlight.detailsLine(
+    distanceUnit: DistanceUnit,
+    altitudeUnit: AltitudeUnit,
+): String = buildList {
     aircraft.altitudeMeters?.let {
-        add(stringResource(R.string.flight_altitude_meters, FlightFormatting.altitudeMeters(it)))
+        add(stringResource(UnitLabels.altitude(altitudeUnit), FlightFormatting.altitude(it, altitudeUnit)))
     }
     aircraft.groundSpeedMetersPerSecond?.let {
-        add(stringResource(R.string.flight_speed_kmh, FlightFormatting.speedKmh(it)))
+        add(stringResource(UnitLabels.speed(distanceUnit), FlightFormatting.speed(it, distanceUnit)))
     }
     add(
         stringResource(
-            R.string.flight_distance_km,
-            FlightFormatting.distanceKm(horizontalDistanceMeters),
+            UnitLabels.distance(distanceUnit),
+            FlightFormatting.distance(horizontalDistanceMeters, distanceUnit),
         ),
     )
     // No zénite o rumo deixa de querer dizer alguma coisa: quem olha para cima vê o avião, não

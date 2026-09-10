@@ -16,6 +16,7 @@ import com.mysky.app.domain.usecase.ObserveSkyUseCase
 import com.mysky.app.domain.usecase.TrackFlightPresenceUseCase
 import com.mysky.app.overheadFlight
 import com.mysky.app.presentation.navigation.MySkyRoutes
+import com.mysky.app.presentation.sky.FakeSettingsRepository
 import com.mysky.app.presentation.sky.skySession
 import io.mockk.coEvery
 import io.mockk.every
@@ -73,6 +74,7 @@ class FlightDetailViewModelTest {
             timeProvider = TimeProvider { now },
         ),
         trackFlightPresence = TrackFlightPresenceUseCase(),
+        settingsRepository = FakeSettingsRepository(),
     )
 
     // --- Invariante 1: a aeronave certa --------------------------------------------------------

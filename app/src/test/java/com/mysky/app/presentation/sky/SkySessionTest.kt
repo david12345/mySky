@@ -2,8 +2,11 @@ package com.mysky.app.presentation.sky
 
 import com.mysky.app.LISBON
 import com.mysky.app.aircraft
+import com.mysky.app.domain.model.OverheadCriteria
 import com.mysky.app.domain.model.SkyError
+import com.mysky.app.domain.model.SkySettings
 import com.mysky.app.domain.repository.LocationRepository
+import com.mysky.app.domain.repository.SettingsRepository
 import com.mysky.app.domain.usecase.ObserveSkyUseCase
 import com.mysky.app.overheadFlight
 import io.mockk.coEvery
@@ -46,11 +49,14 @@ class SkySessionTest {
         }
     }
 
-    private fun TestScope.session() = skySession(
+    private fun TestScope.session(
+        settings: SettingsRepository = FakeSettingsRepository(),
+    ) = skySession(
         observeSky = observeSky,
         locationRepository = locationRepository,
         dispatcher = StandardTestDispatcher(testScheduler),
         lifecycle = lifecycle,
+        settingsRepository = settings,
     )
 
     /** Deixa o primeiro ciclo correr até ao fim, sem consumir nada do intervalo de 30 s. */
@@ -247,5 +253,77 @@ class SkySessionTest {
         runCurrent()
 
         assertEquals(antes, requests.get())
+    }
+
+    // --- Os critérios vêm das preferências, um snapshot por ciclo (AD-018) ----------------------
+
+    @Test
+    fun `cada ciclo usa os criterios guardados no momento em que comeca`() = runTest {
+        val settings = FakeSettingsRepository()
+        val criterios = mutableListOf<OverheadCriteria>()
+        coEvery { observeSky(LISBON, capture(criterios)) } coAnswers {
+            requests.incrementAndGet()
+            Result.success(listOf(flight))
+        }
+        val session = session(settings)
+        backgroundScope.launch { session.observation.collect {} }
+        settle()
+
+        settings.set(SkySettings(detectionRadiusMeters = 90_000.0))
+        advanceTimeBy(30_000)
+        runCurrent()
+
+        assertEquals(2, criterios.size)
+        assertEquals(30_000.0, criterios[0].maxHorizontalDistanceMeters, 0.001)
+        assertEquals("o ciclo seguinte usa o critério novo", 90_000.0, criterios[1].maxHorizontalDistanceMeters, 0.001)
+    }
+
+    @Test
+    fun `uma alteracao a meio de um ciclo so aparece no ciclo seguinte`() = runTest {
+        // É isto que o FR-017 exige, e sai da forma dos dados: o ciclo trabalha com o snapshot que
+        // leu no início, e os critérios são passados por valor ao caso de uso. Uma lista com
+        // critérios misturados é estruturalmente impossível — não há nada para alguém se lembrar de
+        // fazer.
+        val settings = FakeSettingsRepository()
+        val gate = CompletableDeferred<Unit>()
+        val criterios = mutableListOf<OverheadCriteria>()
+        coEvery { observeSky(LISBON, capture(criterios)) } coAnswers {
+            requests.incrementAndGet()
+            if (requests.get() == 1) gate.await()
+            Result.success(listOf(flight))
+        }
+        val session = session(settings)
+        backgroundScope.launch { session.observation.collect {} }
+        runCurrent()
+
+        // O primeiro ciclo está preso no gate, já com o seu snapshot lido.
+        settings.set(SkySettings(detectionRadiusMeters = 120_000.0))
+        runCurrent()
+        assertEquals(30_000.0, criterios[0].maxHorizontalDistanceMeters, 0.001)
+
+        gate.complete(Unit)
+        advanceTimeBy(30_001)
+        runCurrent()
+
+        assertEquals(120_000.0, criterios[1].maxHorizontalDistanceMeters, 0.001)
+    }
+
+    @Test
+    fun `os extremos permitidos continuam a produzir observacoes`() = runTest {
+        // SC-004: nenhuma combinação permitida pode parar a app.
+        val settings = FakeSettingsRepository(
+            SkySettings(detectionRadiusMeters = 150_000.0, minElevationDegrees = 5.0),
+        )
+        val session = session(settings)
+        backgroundScope.launch { session.observation.collect {} }
+        settle()
+
+        assertEquals(1, requests.get())
+
+        settings.set(SkySettings(detectionRadiusMeters = 5_000.0, minElevationDegrees = 60.0))
+        advanceTimeBy(30_000)
+        runCurrent()
+
+        assertEquals(2, requests.get())
     }
 }

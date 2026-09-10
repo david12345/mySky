@@ -1,5 +1,7 @@
 package com.mysky.app.presentation.format
 
+import com.mysky.app.domain.model.AltitudeUnit
+import com.mysky.app.domain.model.DistanceUnit
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -16,22 +18,22 @@ class FlightFormattingTest {
 
     @Test
     fun `distancia sai em quilometros com uma casa decimal`() {
-        assertEquals("12,4", FlightFormatting.distanceKm(12_432.0, pt))
-        assertEquals("0,3", FlightFormatting.distanceKm(300.0, pt))
-        assertEquals("5,0", FlightFormatting.distanceKm(5_000.0, pt))
+        assertEquals("12,4", FlightFormatting.distance(12_432.0, locale = pt))
+        assertEquals("0,3", FlightFormatting.distance(300.0, locale = pt))
+        assertEquals("5,0", FlightFormatting.distance(5_000.0, locale = pt))
     }
 
     @Test
     fun `altitude sai inteira em metros`() {
-        assertEquals("10 400", FlightFormatting.altitudeMeters(10_400.4, pt).normalizeSpaces())
-        assertEquals("950", FlightFormatting.altitudeMeters(949.6, pt))
+        assertEquals("10 400", FlightFormatting.altitude(10_400.4, locale = pt).normalizeSpaces())
+        assertEquals("950", FlightFormatting.altitude(949.6, locale = pt))
     }
 
     @Test
     fun `velocidade converte de metros por segundo para quilometros por hora`() {
         // 233,33 m/s = 840 km/h: a fonte reporta SI e o utilizador lê km/h.
-        assertEquals("840", FlightFormatting.speedKmh(233.333, pt))
-        assertEquals("0", FlightFormatting.speedKmh(0.0, pt))
+        assertEquals("840", FlightFormatting.speed(233.333, locale = pt))
+        assertEquals("0", FlightFormatting.speed(0.0, locale = pt))
     }
 
     @Test
@@ -149,5 +151,43 @@ class FlightFormattingTest {
         // a ir para algum lado. Suprimir os dois por simetria aparente apagaria informação correta.
         assertNull(FlightFormatting.compassPointOrNull(bearingDegrees = 45.0, elevationDegrees = 89.0))
         assertEquals(CompassPoint.NE, FlightFormatting.compassPointOf(45.0))
+    }
+
+    // --- As unidades escolhidas pelo utilizador (004-settings) -----------------------------------
+
+    @Test
+    fun `distancia sai em milhas quando e isso que o utilizador escolheu`() {
+        // 30 km = 18,6 milhas. A conversão é da apresentação; o domínio continua em metros.
+        assertEquals("18,6", FlightFormatting.distance(30_000.0, DistanceUnit.MILES, pt))
+        assertEquals("30,0", FlightFormatting.distance(30_000.0, DistanceUnit.KILOMETERS, pt))
+    }
+
+    @Test
+    fun `altitude sai em pes quando e isso que o utilizador escolheu`() {
+        // 10 400 m = 34 121 pés, que é o que quem pensa em pés espera ler.
+        assertEquals("34 121", FlightFormatting.altitude(10_400.0, AltitudeUnit.FEET, pt).normalizeSpaces())
+        assertEquals("10 400", FlightFormatting.altitude(10_400.0, AltitudeUnit.METERS, pt).normalizeSpaces())
+    }
+
+    @Test
+    fun `a velocidade segue a unidade de distancia`() {
+        // Não tem preferência própria de propósito: quem lê milhas espera milhas por hora, e
+        // km/h ao lado de distâncias em milhas seria a mistura que o SC-006 proíbe.
+        assertEquals("840", FlightFormatting.speed(233.333, DistanceUnit.KILOMETERS, pt))
+        assertEquals("522", FlightFormatting.speed(233.333, DistanceUnit.MILES, pt))
+    }
+
+    @Test
+    fun `sem unidade indicada valem as de origem`() {
+        // Os valores por omissão são os que estavam fixos no código antes desta feature — é o que
+        // faz os testes anteriores continuarem a provar o mesmo.
+        assertEquals(
+            FlightFormatting.distance(30_000.0, DistanceUnit.KILOMETERS, pt),
+            FlightFormatting.distance(30_000.0, locale = pt),
+        )
+        assertEquals(
+            FlightFormatting.altitude(10_400.0, AltitudeUnit.METERS, pt),
+            FlightFormatting.altitude(10_400.0, locale = pt),
+        )
     }
 }

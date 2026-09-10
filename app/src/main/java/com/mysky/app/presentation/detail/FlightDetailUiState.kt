@@ -1,5 +1,7 @@
 package com.mysky.app.presentation.detail
 
+import com.mysky.app.domain.model.AltitudeUnit
+import com.mysky.app.domain.model.DistanceUnit
 import com.mysky.app.domain.model.FlightPresence
 import com.mysky.app.domain.model.OverheadFlight
 import com.mysky.app.domain.model.SkyError
@@ -20,6 +22,9 @@ data class FlightDetailUiState(
     val presence: FlightPresence = FlightPresence.NeverObserved,
     val lastUpdatedEpochSeconds: Long? = null,
     val lastError: SkyError? = null,
+    /** As unidades escolhidas, pelo mesmo caminho do ecrã principal (AD-020). */
+    val distanceUnit: DistanceUnit = DistanceUnit.KILOMETERS,
+    val altitudeUnit: AltitudeUnit = AltitudeUnit.METERS,
 ) {
     /** O voo a apresentar: o atual, ou o último conhecido se a aeronave já saiu do céu. */
     val flight: OverheadFlight?

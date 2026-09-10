@@ -1,5 +1,7 @@
 package com.mysky.app.presentation.main
 
+import com.mysky.app.domain.model.AltitudeUnit
+import com.mysky.app.domain.model.DistanceUnit
 import com.mysky.app.domain.model.OverheadFlight
 import com.mysky.app.domain.model.SkyError
 import com.mysky.app.presentation.sky.LoadPhase
@@ -29,6 +31,12 @@ enum class PermissionState {
 data class MainUiState(
     val permission: PermissionState = PermissionState.Unknown,
     val observation: SkyObservation = SkyObservation(),
+    /**
+     * As unidades escolhidas pelo utilizador, que viajam **no estado** e não por um canal implícito
+     * (AD-020). Chegam aos composables como mais um campo do que eles já leem.
+     */
+    val distanceUnit: DistanceUnit = DistanceUnit.KILOMETERS,
+    val altitudeUnit: AltitudeUnit = AltitudeUnit.METERS,
 ) {
     val phase: LoadPhase get() = observation.phase
 

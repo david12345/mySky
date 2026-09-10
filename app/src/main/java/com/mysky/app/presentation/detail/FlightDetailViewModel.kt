@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mysky.app.domain.model.FlightPresence
+import com.mysky.app.domain.repository.SettingsRepository
 import com.mysky.app.domain.usecase.TrackFlightPresenceUseCase
 import com.mysky.app.presentation.sky.SkyObservation
 import com.mysky.app.presentation.sky.SkySession
@@ -11,7 +12,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -31,6 +32,7 @@ class FlightDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val skySession: SkySession,
     private val trackFlightPresence: TrackFlightPresenceUseCase,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     val icao24: String? = savedStateHandle[ARG_ICAO24]
@@ -50,8 +52,8 @@ class FlightDetailViewModel @Inject constructor(
      */
     private var lastReducedSequence: Long = 0L
 
-    val uiState: StateFlow<FlightDetailUiState> = skySession.observation
-        .map { observation ->
+    val uiState: StateFlow<FlightDetailUiState> =
+        combine(skySession.observation, settingsRepository.settings) { observation, settings ->
             presence = reduce(observation)
             FlightDetailUiState(
                 icao24 = icao24,
@@ -59,6 +61,8 @@ class FlightDetailViewModel @Inject constructor(
                 presence = presence,
                 lastUpdatedEpochSeconds = observation.lastUpdatedEpochSeconds,
                 lastError = observation.lastError,
+                distanceUnit = settings.distanceUnit,
+                altitudeUnit = settings.altitudeUnit,
             )
         }
         .stateIn(

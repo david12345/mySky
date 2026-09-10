@@ -3,6 +3,7 @@ package com.mysky.app.presentation.main
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mysky.app.domain.repository.LocationRepository
+import com.mysky.app.domain.repository.SettingsRepository
 import com.mysky.app.presentation.sky.SkySession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -29,13 +30,23 @@ import kotlinx.coroutines.flow.update
 class MainViewModel @Inject constructor(
     private val skySession: SkySession,
     private val locationRepository: LocationRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val permission = MutableStateFlow(PermissionState.Unknown)
 
     val uiState: StateFlow<MainUiState> =
-        combine(permission, skySession.observation) { permissionState, observation ->
-            MainUiState(permission = permissionState, observation = observation)
+        combine(
+            permission,
+            skySession.observation,
+            settingsRepository.settings,
+        ) { permissionState, observation, settings ->
+            MainUiState(
+                permission = permissionState,
+                observation = observation,
+                distanceUnit = settings.distanceUnit,
+                altitudeUnit = settings.altitudeUnit,
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), MainUiState())
 
     /** Reavalia a permissão sempre que o ecrã volta a ficar visível (FR-006 da 001). */

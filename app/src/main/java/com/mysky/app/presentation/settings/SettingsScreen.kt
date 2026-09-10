@@ -2,9 +2,12 @@ package com.mysky.app.presentation.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -14,6 +17,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -69,9 +73,47 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // O que conta como "o meu céu" vem primeiro: é a razão de ser deste ecrã, e a tabela
+            // de rotas é manutenção.
+            Text(
+                text = stringResource(R.string.settings_sky_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            HorizontalDivider()
+
+            SkySettingsSection(
+                state = state,
+                onRadiusChanged = viewModel::onRadiusChanged,
+                onMinElevationChanged = viewModel::onMinElevationChanged,
+                onMinAltitudeChanged = viewModel::onMinAltitudeChanged,
+            )
+
+            Spacer(Modifier.padding(4.dp))
+            Text(
+                text = stringResource(R.string.settings_units_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            HorizontalDivider()
+
+            UnitsSection(
+                state = state,
+                onDistanceUnitChanged = viewModel::onDistanceUnitChanged,
+                onAltitudeUnitChanged = viewModel::onAltitudeUnitChanged,
+            )
+
+            OutlinedButton(
+                onClick = viewModel::onResetToDefaults,
+                enabled = !state.isAtDefaults,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Text(stringResource(R.string.settings_reset))
+            }
+
+            Spacer(Modifier.padding(8.dp))
             Text(
                 text = stringResource(R.string.settings_routes_title),
                 style = MaterialTheme.typography.titleMedium,

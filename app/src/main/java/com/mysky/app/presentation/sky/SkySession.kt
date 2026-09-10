@@ -1,9 +1,9 @@
 package com.mysky.app.presentation.sky
 
 import com.mysky.app.di.DefaultDispatcher
-import com.mysky.app.domain.model.OverheadCriteria
 import com.mysky.app.domain.model.SkyError
 import com.mysky.app.domain.repository.LocationRepository
+import com.mysky.app.domain.repository.SettingsRepository
 import com.mysky.app.domain.time.TimeProvider
 import com.mysky.app.domain.usecase.ObserveSkyUseCase
 import dagger.hilt.android.ActivityRetainedLifecycle
@@ -21,6 +21,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -41,8 +42,10 @@ import kotlinx.coroutines.withTimeoutOrNull
  * - na transição lista → detalhe a contagem passa por 1 → 2 → 1 sem chegar a zero, por isso o laço
  *   não reinicia nem repete um pedido durante a sobreposição.
  *
- * Não sabe o que é uma permissão: limita-se a perguntar ao repositório, a cada ciclo, se pode
- * obter a posição. Quem trata do pedido e do rationale é o ecrã principal, e é ele que chama
+ * Não sabe o que é uma permissão nem o que é um ecrã de definições: limita-se a perguntar aos
+ * repositórios, a cada ciclo, se pode obter a posição e com que critérios deve procurar. É isso que
+ * fecha a promessa que a AD-009 deixou aberta na primeira feature — os critérios deixam de estar
+ * fixos no código. Quem trata do pedido e do rationale é o ecrã principal, e é ele que chama
  * [onPermissionMayHaveChanged] quando ela pode ter mudado — sem isso, quem acabou de conceder
  * esperaria pelo tique seguinte para ver a primeira lista.
  *
@@ -54,6 +57,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class SkySession @Inject constructor(
     private val observeSky: ObserveSkyUseCase,
     private val locationRepository: LocationRepository,
+    private val settingsRepository: SettingsRepository,
     private val timeProvider: TimeProvider,
     @DefaultDispatcher dispatcher: CoroutineDispatcher,
     lifecycle: ActivityRetainedLifecycle,
@@ -153,7 +157,14 @@ class SkySession @Inject constructor(
         }
 
         mutableState.update { it.copy(phase = LoadPhase.LoadingFlights) }
-        return observeSky(observer, OverheadCriteria()).fold(
+
+        // Uma leitura pontual, no início do ciclo, e não uma subscrição viva (AD-018). O ciclo
+        // trabalha com este snapshot do princípio ao fim: como os critérios são um `data class`
+        // passado por valor ao caso de uso, uma lista com critérios misturados é estruturalmente
+        // impossível — não há nada para alguém se lembrar de fazer.
+        val criteria = settingsRepository.settings.first().toCriteria()
+
+        return observeSky(observer, criteria).fold(
             onSuccess = { flights ->
                 mutableState.update {
                     it.copy(

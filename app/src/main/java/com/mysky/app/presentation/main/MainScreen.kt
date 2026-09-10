@@ -136,7 +136,12 @@ private fun FlightList(uiState: MainUiState, onFlightClick: (String) -> Unit) {
         // Chave estável: uma aeronave que sai do céu entre duas atualizações desaparece sem
         // reordenar a lista debaixo do dedo de quem estava a tocar noutra.
         items(items = uiState.flights, key = { it.aircraft.icao24 }) { flight ->
-            FlightRow(flight = flight, onClick = onFlightClick)
+            FlightRow(
+                flight = flight,
+                distanceUnit = uiState.distanceUnit,
+                altitudeUnit = uiState.altitudeUnit,
+                onClick = onFlightClick,
+            )
             HorizontalDivider()
         }
     }

@@ -31,10 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mysky.app.R
+import com.mysky.app.domain.model.AltitudeUnit
 import com.mysky.app.domain.model.OverheadFlight
 import com.mysky.app.presentation.format.CompassPoint
 import com.mysky.app.presentation.format.FlightFormatting
 import com.mysky.app.presentation.format.RouteFormatting
+import com.mysky.app.presentation.format.UnitLabels
 import com.mysky.app.presentation.format.VerticalMovement
 import com.mysky.app.presentation.format.freshnessText
 import com.mysky.app.presentation.format.messageRes
@@ -148,9 +150,15 @@ private fun FlightDetail(
         }
 
         Section(stringResource(R.string.detail_section_flight))
-        AltitudeFields(flight)
+        AltitudeFields(flight, state.altitudeUnit)
         flight.aircraft.groundSpeedMetersPerSecond?.let {
-            Field(stringResource(R.string.detail_speed), stringResource(R.string.flight_speed_kmh, FlightFormatting.speedKmh(it)))
+            Field(
+                label = stringResource(R.string.detail_speed),
+                value = stringResource(
+                    UnitLabels.speed(state.distanceUnit),
+                    FlightFormatting.speed(it, state.distanceUnit),
+                ),
+            )
         }
         flight.aircraft.headingDegrees?.let {
             // Sem a regra do zénite: um avião mesmo por cima continua a ir para algum lado.
@@ -162,8 +170,11 @@ private fun FlightDetail(
 
         Section(stringResource(R.string.detail_section_observer))
         Field(
-            stringResource(R.string.detail_distance),
-            stringResource(R.string.flight_distance_km, FlightFormatting.distanceKm(flight.horizontalDistanceMeters)),
+            label = stringResource(R.string.detail_distance),
+            value = stringResource(
+                UnitLabels.distance(state.distanceUnit),
+                FlightFormatting.distance(flight.horizontalDistanceMeters, state.distanceUnit),
+            ),
         )
         BearingField(flight)
         Field(
@@ -189,7 +200,7 @@ private fun FlightDetail(
  * delas está errada — quando divergirem dezenas de metros é legítimo.
  */
 @Composable
-private fun AltitudeFields(flight: OverheadFlight) {
+private fun AltitudeFields(flight: OverheadFlight, unit: AltitudeUnit) {
     val aircraft = flight.aircraft
     // A elevação é calculada com a geométrica quando existe. Assinalar qual entrou na conta só faz
     // sentido — e só é preciso — quando estão as duas no ecrã.
@@ -199,13 +210,13 @@ private fun AltitudeFields(flight: OverheadFlight) {
     aircraft.geometricAltitudeMeters?.let {
         Field(
             label = stringResource(R.string.detail_altitude_geometric) + if (ambas) marca else "",
-            value = stringResource(R.string.flight_altitude_meters, FlightFormatting.altitudeMeters(it)),
+            value = stringResource(UnitLabels.altitude(unit), FlightFormatting.altitude(it, unit)),
         )
     }
     aircraft.barometricAltitudeMeters?.let {
         Field(
             label = stringResource(R.string.detail_altitude_barometric),
-            value = stringResource(R.string.flight_altitude_meters, FlightFormatting.altitudeMeters(it)),
+            value = stringResource(UnitLabels.altitude(unit), FlightFormatting.altitude(it, unit)),
         )
     }
 }
