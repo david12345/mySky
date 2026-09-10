@@ -15,6 +15,7 @@ import com.mysky.app.domain.model.SkySettings
 import com.mysky.app.domain.repository.SettingsRepository
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -47,14 +48,33 @@ class SettingsRepositoryImpl @Inject constructor(
         .catch { throwable -> if (throwable is IOException) emit(emptyPreferences()) else throw throwable }
         .map { preferences -> preferences.toSettings().coerced() }
 
+    /**
+     * Escrever nunca lança.
+     *
+     * A leitura já degradava com graça perante armazenamento corrompido; a escrita não, e isso era
+     * pior do que parecia: uma exceção daqui subiria pelo `viewModelScope` do ecrã e **rebentava a
+     * app** ao primeiro toque num cursor, num aparelho onde o ficheiro se estragou por uma razão que
+     * não é culpa de ninguém.
+     *
+     * O `DataStore` de produção já é criado com um tratador que substitui um ficheiro ilegível por um
+     * vazio, o que resolve a causa. Isto é a segunda linha de defesa: a promessa de não lançar é do
+     * repositório, e não pode depender de como quem o constrói configurou o armazenamento.
+     */
     override suspend fun update(transform: (SkySettings) -> SkySettings) {
-        store.edit { preferences ->
-            val updated = transform(preferences.toSettings()).coerced()
-            preferences[RADIUS] = updated.detectionRadiusMeters
-            preferences[MIN_ELEVATION] = updated.minElevationDegrees
-            preferences[MIN_ALTITUDE] = updated.minAltitudeMeters
-            preferences[DISTANCE_UNIT] = updated.distanceUnit.name
-            preferences[ALTITUDE_UNIT] = updated.altitudeUnit.name
+        try {
+            store.edit { preferences ->
+                val updated = transform(preferences.toSettings()).coerced()
+                preferences[RADIUS] = updated.detectionRadiusMeters
+                preferences[MIN_ELEVATION] = updated.minElevationDegrees
+                preferences[MIN_ALTITUDE] = updated.minAltitudeMeters
+                preferences[DISTANCE_UNIT] = updated.distanceUnit.name
+                preferences[ALTITUDE_UNIT] = updated.altitudeUnit.name
+            }
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (io: IOException) {
+            // A escolha do utilizador perde-se, o que é mau; a app manter-se de pé é mais
+            // importante do que gravar um valor que não podia ser gravado de qualquer forma.
         }
     }
 

@@ -154,6 +154,25 @@ class SettingsRepositoryImplTest {
         assertEquals(SkySettings(), repository(store).settings.first())
     }
 
+    @Test
+    fun `escrever sobre armazenamento corrompido nao lanca`() = runTest {
+        // A leitura já degradava com graça; a escrita não, e isso era pior do que parecia — uma
+        // exceção daqui subiria pelo `viewModelScope` do ecrã e rebentava a app ao primeiro toque
+        // num cursor, num aparelho onde o ficheiro se estragou por razões que não são de ninguém.
+        val file = File(folder.root, "corrompido-na-escrita.preferences_pb")
+        file.writeBytes(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05))
+        val repository = repository(
+            PreferenceDataStoreFactory.create(
+                scope = CoroutineScope(StandardTestDispatcher(testScheduler)),
+                produceFile = { file },
+            ),
+        )
+
+        // Sem tratador de corrupção — de propósito: a promessa de não lançar é do repositório e não
+        // pode depender de como quem o constrói configurou o armazenamento.
+        repository.update { it.copy(detectionRadiusMeters = 80_000.0) }
+    }
+
     // --- A reposição ----------------------------------------------------------------------------
 
     @Test
