@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mySky — os aviões que passam por cima de ti</title>
+<meta name="description" content="App Android que mostra os aviões a passar sobre a tua localização, com companhia, rota e a que altura estão no céu. A tua posição nunca sai do telefone.">
+<meta property="og:title" content="mySky">
+<meta property="og:description" content="Os aviões que passam por cima de ti, agora.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --border: #e2e5ea;
+    --ink: #14171c;
+    --ink-soft: #5a6270;
+    --accent: #1d5fd8;
+    --accent-soft: #eaf0fd;
+    --sky-from: #0b1a35;
+    --sky-to: #1b3a6b;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1014;
+      --surface: #161a20;
+      --border: #262c35;
+      --ink: #e8ebf0;
+      --ink-soft: #98a1b0;
+      --accent: #7aa7ff;
+      --accent-soft: #16203a;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+  /* --- Cabeçalho: o céu --- */
+  header {
+    background: linear-gradient(170deg, var(--sky-from), var(--sky-to));
+    color: #f2f6ff;
+    padding: 72px 0 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1.2px 1.2px at 12% 22%, rgba(255,255,255,.7) 50%, transparent 51%),
+      radial-gradient(1px 1px at 34% 12%, rgba(255,255,255,.55) 50%, transparent 51%),
+      radial-gradient(1.4px 1.4px at 58% 30%, rgba(255,255,255,.6) 50%, transparent 51%),
+      radial-gradient(1px 1px at 78% 16%, rgba(255,255,255,.5) 50%, transparent 51%),
+      radial-gradient(1.1px 1.1px at 88% 38%, rgba(255,255,255,.45) 50%, transparent 51%),
+      radial-gradient(1px 1px at 22% 48%, rgba(255,255,255,.35) 50%, transparent 51%);
+    pointer-events: none;
+  }
+  header .wrap { position: relative; z-index: 1; }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  h1 { font-size: clamp(2.6rem, 8vw, 3.6rem); margin: 0; letter-spacing: -.03em; font-weight: 700; }
+  .version {
+    font: 600 .75rem/1 var(--mono);
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22);
+    padding: 5px 9px; border-radius: 999px; letter-spacing: .02em;
+  }
+  .tagline { font-size: clamp(1.1rem, 3.4vw, 1.35rem); margin: 18px 0 0; max-width: 30ch; color: #cfdcf5; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 34px; }
+  .btn {
+    display: inline-block; text-decoration: none; font-weight: 600;
+    padding: 13px 22px; border-radius: 10px; transition: transform .12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: #f2f6ff; color: #0b1a35; }
+  .btn-ghost { border: 1px solid rgba(255,255,255,.3); color: #dce6fb; }
+  .cta small { color: #9fb3d6; font-size: .8rem; }
+
+  /* --- Secções --- */
+  section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: 0; }
+  h2 { font-size: 1.45rem; margin: 0 0 6px; letter-spacing: -.015em; }
+  h2 + .lede { color: var(--ink-soft); margin: 0 0 28px; }
+  h3 { font-size: 1.02rem; margin: 0 0 4px; }
+  p { margin: 0 0 14px; }
+  a { color: var(--accent); }
+
+  .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card p { color: var(--ink-soft); font-size: .92rem; margin: 0; }
+  .card .icon { font-size: 1.4rem; display: block; margin-bottom: 10px; }
+
+  figure { margin: 0 0 24px; }
+  figcaption { color: var(--ink-soft); font-size: .85rem; margin-top: 10px; }
+  svg.diagram { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); }
+
+  dl.facts { display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; margin: 0; }
+  dl.facts dt { color: var(--ink-soft); font-size: .9rem; }
+  dl.facts dd { margin: 0; font-size: .92rem; }
+
+  .note {
+    background: var(--accent-soft); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px; padding: 16px 18px; font-size: .92rem;
+  }
+  .note strong { display: block; margin-bottom: 4px; }
+  .note p:last-child { margin: 0; }
+
+  code { font: .88em var(--mono); background: var(--accent-soft); padding: 2px 5px; border-radius: 4px; }
+  ol.steps { padding-left: 22px; }
+  ol.steps li { margin-bottom: 10px; }
+
+  footer { padding: 40px 0 64px; color: var(--ink-soft); font-size: .87rem; }
+  footer a { color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <h1>mySky</h1>
+      <span class="version">v1.0.0</span>
+    </div>
+    <p class="tagline">Os aviões que estão a passar por cima de ti. Agora.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/david12345/mySky/releases/latest">Descarregar o APK</a>
+      <a class="btn btn-ghost" href="https://github.com/david12345/mySky">Ver o código</a>
+      <small>Android 8.0 ou superior · 10 MB</small>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>O que faz</h2>
+    <p class="lede">Aponta para cima e diz-te o que está lá.</p>
+    <div class="cards">
+      <div class="card">
+        <span class="icon">🛫</span>
+        <h3>A lista do teu céu</h3>
+        <p>As aeronaves que estão efetivamente sobre ti, ordenadas da mais alta no céu para a mais baixa — não as que estão por perto no mapa.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🧭</span>
+        <h3>Para onde olhar</h3>
+        <p>A direção, o ângulo acima do horizonte e a distância. Quando o avião está mesmo no zénite, diz-te isso em vez de inventar um rumo.</p>
+      </div>
+      <div class="card">
+        <span class="icon">✈️</span>
+        <h3>De onde vem e para onde vai</h3>
+        <p>Companhia e rota — <code>LIS → CDG</code> — resolvidas no telefone, a partir de tabelas que viajam dentro da app.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📖</span>
+        <h3>Tudo o que se sabe</h3>
+        <p>Altitude barométrica e geométrica, velocidade, rumo, se está a subir ou a descer, e há quanto tempo o dado foi visto.</p>
+      </div>
+      <div class="card">
+        <span class="icon">⚙️</span>
+        <h3>O teu céu é teu</h3>
+        <p>Ajusta o raio, o ângulo mínimo e a altitude mínima. Quem vive ao lado de um aeroporto não quer o mesmo que quem vive no interior.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🔒</span>
+        <h3>A posição não sai daqui</h3>
+        <p>É usada no telefone para calcular ângulos e distâncias. Não há conta, não há servidor nosso, não há analítica.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>O que é "estar no meu céu"</h2>
+    <p class="lede">Não é estar perto. É estar acima do horizonte, o suficiente para se ver.</p>
+    <figure>
+      <svg class="diagram" viewBox="0 0 720 260" role="img" aria-label="Diagrama: um observador no solo, o ângulo mínimo acima do horizonte, e dois aviões — um que conta e outro demasiado baixo no horizonte.">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#0b1a35"/><stop offset="1" stop-color="#274a80"/>
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="720" height="210" fill="url(#sky)"/>
+        <rect x="0" y="210" width="720" height="50" fill="#1a2230"/>
+        <!-- horizonte -->
+        <line x1="40" y1="210" x2="690" y2="210" stroke="#8fa4c8" stroke-width="1.5"/>
+        <text x="600" y="228" fill="#8fa4c8" font-size="13" font-family="system-ui">horizonte</text>
+        <!-- linha do angulo minimo -->
+        <line x1="90" y1="210" x2="560" y2="45" stroke="#7aa7ff" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <path d="M 150 210 A 60 60 0 0 0 132 189" fill="none" stroke="#7aa7ff" stroke-width="1.5"/>
+        <text x="158" y="200" fill="#7aa7ff" font-size="13" font-family="system-ui">ângulo mínimo</text>
+        <!-- observador -->
+        <circle cx="90" cy="210" r="6" fill="#f2f6ff"/>
+        <text x="66" y="248" fill="#c8d4ec" font-size="13" font-family="system-ui">tu</text>
+        <!-- aviao que conta -->
+        <g transform="translate(430 78)">
+          <text font-size="26" text-anchor="middle">✈️</text>
+          <text x="0" y="30" fill="#eaf0ff" font-size="13" font-family="system-ui" text-anchor="middle">conta</text>
+        </g>
+        <!-- aviao demasiado baixo -->
+        <g transform="translate(610 176)" opacity=".45">
+          <text font-size="26" text-anchor="middle">✈️</text>
+          <text x="0" y="30" fill="#c8d4ec" font-size="13" font-family="system-ui" text-anchor="middle">baixo no horizonte</text>
+        </g>
+      </svg>
+      <figcaption>O ângulo mínimo é a definição que mais muda o que vês. Subi-lo mostra só o que passa quase por cima; baixá-lo enche a lista de aviões que só se veem com binóculos.</figcaption>
+    </figure>
+    <div class="note">
+      <strong>As duas definições conversam</strong>
+      <p>Com o ângulo mínimo em 25°, um avião a 12 km de altitude deixa de ser visível além de ~26 km. Aumentar o raio para 150 km não traz aviões novos — traz os mesmos, e mais alguns para serem descartados. A app diz-te isso quando acontece, em vez de te deixar a adivinhar.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Como instalar</h2>
+    <p class="lede">Não está na Play Store. É um APK que instalas à mão.</p>
+    <ol class="steps">
+      <li>Descarrega o <a href="https://github.com/david12345/mySky/releases/latest">APK da última release</a> no telefone.</li>
+      <li>Abre o ficheiro. O Android vai pedir para permitir a instalação de fontes desconhecidas — é normal para apps fora da loja.</li>
+      <li>Ao abrir, a app explica para que precisa da localização <em>antes</em> de a pedir. Chega a aproximada.</li>
+    </ol>
+    <div class="note">
+      <strong>Projeto pessoal, não produto comercial</strong>
+      <p>A app está assinada com uma chave própria e não passou por revisão de loja. Vem sem garantias — e sem contas, sem anúncios e sem telemetria.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>De onde vêm os dados</h2>
+    <p class="lede">Três fontes, todas públicas, todas creditadas.</p>
+    <dl class="facts">
+      <dt>Posições</dt>
+      <dd><a href="https://opensky-network.org/">OpenSky Network</a>, em acesso anónimo. É o que limita a app a algumas horas de ecrã aberto por dia.</dd>
+      <dt>Companhias</dt>
+      <dd><a href="https://openflights.org/data.php">OpenFlights</a>, sob <a href="https://opendatacommons.org/licenses/odbl/">Open Database License</a>. 5 774 operadores, dentro da app.</dd>
+      <dt>Rotas</dt>
+      <dd><a href="https://github.com/vradarserver/standing-data">Virtual Radar Server standing data</a>, domínio público (CC0). 584 832 rotas, dentro da app.</dd>
+    </dl>
+    <p style="margin-top:24px">As tabelas de companhias e de rotas viajam no APK e são consultadas localmente: nenhum pedido de rede é feito para descobrir quem opera um voo ou de onde ele vem. A tabela de rotas pode ser atualizada a partir das definições, quando quiseres.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Por dentro</h2>
+    <p class="lede">Para quem gosta de saber como é feito.</p>
+    <dl class="facts">
+      <dt>Linguagem</dt><dd>Kotlin, com Jetpack Compose e Material 3</dd>
+      <dt>Arquitetura</dt><dd>Clean Architecture em três camadas, com o domínio sem uma linha de Android</dd>
+      <dt>Testes</dt><dd>277 testes unitários na JVM, incluindo os casos-limite geométricos — zénite, polos, antimeridiano</dd>
+      <dt>Tabela de rotas</dt><dd>Ficheiro binário de largura fixa, lido por pesquisa binária: 37 µs por aeronave, sem nada em memória</dd>
+      <dt>Decisões</dt><dd>22 decisões de arquitetura registadas, com os <em>trade-offs</em> por escrito</dd>
+    </dl>
+    <p style="margin-top:24px">O repositório traz a especificação de cada funcionalidade, o plano, os contratos entre camadas e o guião de validação — em <code>specs/</code>. As decisões estruturais e as razões de cada uma estão no <code>CLAUDE.md</code>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><strong>mySky</strong> · <a href="https://github.com/david12345/mySky">código no GitHub</a> · <a href="https://github.com/david12345/mySky/releases">todas as releases</a></p>
+    <p>Dados de voo da OpenSky Network. Companhias do OpenFlights, sob ODbL. Rotas do Virtual Radar Server, em domínio público.</p>
+  </div>
+</footer>
+
+</body>
+</html>

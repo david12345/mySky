@@ -137,9 +137,9 @@ se mexer em cada definição.
 
 - [X] T036 [P] Verificar que nenhum ficheiro em `app/src/main/java/com/mysky/app/domain/` importa `android.*`, Retrofit, Room, Compose ou WorkManager (princípio I): `grep -rE "^import (android|retrofit2|androidx\.room|androidx\.compose|androidx\.work)" app/src/main/java/com/mysky/app/domain/`
 - [X] T037 [P] Verificar que nenhum controlo do ecrã liga ao intervalo do trabalho periódico (FR-015): `grep -rn "refreshIntervalMinutes" app/src/main/java/com/mysky/app/presentation/` tem de não devolver nada
-- [ ] T038 [P] Verificar que a unidade não viaja por `CompositionLocal` (AD-020): `grep -rn "compositionLocalOf\|staticCompositionLocalOf" app/src/main/java/com/mysky/app/presentation/` tem de não devolver nada
-- [ ] T039 [P] Limpar os marcadores `TODO(feature/settings)` resolvidos em `data/settings/` e `presentation/settings/`, e confirmar que os que sobram pertencem a features futuras
-- [ ] T040 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes
+- [X] T038 [P] Verificar que a unidade não viaja por `CompositionLocal` (AD-020): `grep -rn "compositionLocalOf\|staticCompositionLocalOf" app/src/main/java/com/mysky/app/presentation/` tem de não devolver nada
+- [X] T039 [P] Limpar os marcadores `TODO(feature/settings)` resolvidos em `data/settings/` e `presentation/settings/`, e confirmar que os que sobram pertencem a features futuras
+- [X] T040 Correr a suite completa e o lint: `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — zero erros de lint, todos os testes verdes
 - [ ] T041 Executar a validação manual de [quickstart.md](./quickstart.md) secções 5 a 7, com atenção ao passo 8 (um arrasto tem de produzir **um** pedido, verificado no Network Inspector) e ao passo 7 (repor não pode alterar a data da tabela de rotas)
 - [ ] T042 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (princípio VI)
 - [ ] T043 Atualizar a secção "Estado atual" do `CLAUDE.md` para refletir a feature concluída e apontar a seguinte
