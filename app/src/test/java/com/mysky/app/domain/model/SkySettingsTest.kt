@@ -96,7 +96,7 @@ class SkySettingsTest {
 
         val reposto = doutrasFeatures.withDefaults()
 
-        assertEquals(SkySettings.MIN_REFRESH_INTERVAL_MINUTES, reposto.refreshIntervalMinutes)
+        assertEquals(SkySettings.DEFAULT_REFRESH_INTERVAL_MINUTES, reposto.refreshIntervalMinutes)
         assertEquals(true, reposto.notificationsEnabled)
         assertEquals(false, reposto.widgetEnabled)
         assertEquals(SkySettings().detectionRadiusMeters, reposto.detectionRadiusMeters, 0.001)
@@ -172,7 +172,7 @@ class SkySettingsTest {
         // cadência passou a ser um deles quando ganhou controlo.
         val mexido = SkySettings(refreshIntervalMinutes = 120L)
 
-        assertEquals(SkySettings.MIN_REFRESH_INTERVAL_MINUTES, mexido.withDefaults().refreshIntervalMinutes)
+        assertEquals(SkySettings.DEFAULT_REFRESH_INTERVAL_MINUTES, mexido.withDefaults().refreshIntervalMinutes)
     }
 
     @Test

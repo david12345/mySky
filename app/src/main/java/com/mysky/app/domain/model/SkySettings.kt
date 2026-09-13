@@ -16,7 +16,7 @@ data class SkySettings(
     val detectionRadiusMeters: Double = OverheadCriteria.DEFAULT_RADIUS_METERS,
     val minElevationDegrees: Double = OverheadCriteria.DEFAULT_MIN_ELEVATION_DEGREES,
     val minAltitudeMeters: Double = OverheadCriteria.DEFAULT_MIN_ALTITUDE_METERS,
-    val refreshIntervalMinutes: Long = MIN_REFRESH_INTERVAL_MINUTES,
+    val refreshIntervalMinutes: Long = DEFAULT_REFRESH_INTERVAL_MINUTES,
     val distanceUnit: DistanceUnit = DistanceUnit.KILOMETERS,
     val altitudeUnit: AltitudeUnit = AltitudeUnit.METERS,
     val notificationsEnabled: Boolean = false,
@@ -55,12 +55,28 @@ data class SkySettings(
         // Entrou na 005, quando a cadência ganhou controlo no ecrã. A regra desta função não mudou —
         // "os campos ajustáveis no ecrã" — mudou o conjunto a que ela se aplica. Deixá-la de fora
         // faria o botão repor tudo menos uma coisa, sem o utilizador ter como saber qual.
-        refreshIntervalMinutes = MIN_REFRESH_INTERVAL_MINUTES,
+        refreshIntervalMinutes = DEFAULT_REFRESH_INTERVAL_MINUTES,
     )
 
     companion object {
         /** Mínimo imposto pelo Android para `PeriodicWorkRequest`. */
         const val MIN_REFRESH_INTERVAL_MINUTES = 15L
+
+        /**
+         * Cadência de origem do widget: **30 minutos, e não o mínimo de 15**.
+         *
+         * A 15 minutos o widget já está fora da janela de frescura quando acorda — uma aeronave
+         * atravessa um raio de 30 km em 4 a 5 minutos — por isso duplicar a frequência não o torna
+         * materialmente mais útil. Mas custa 96 consultas por dia em vez de 48, e as duas passam pelo
+         * mesmo orçamento diário que o ecrã: são 24 minutos de tempo de ecrã por dia entregues por um
+         * ganho que o utilizador não nota.
+         *
+         * **Constante separada do mínimo de propósito.** Estavam a ser a mesma, o que fazia o valor
+         * de origem contradizer em silêncio o que a especificação da 005 tinha decidido. Um valor de
+         * origem e um limite inferior são coisas diferentes; escrevê-los com o mesmo nome garante que
+         * mudar um muda o outro sem ninguém reparar.
+         */
+        const val DEFAULT_REFRESH_INTERVAL_MINUTES = 30L
 
         /**
          * Cadência do trabalho de fundo do widget, em minutos.

@@ -159,7 +159,7 @@ class SettingsViewModelTest {
         val settings = settingsRepository.settings.first()
         // Alterado na 005: a cadência ganhou controlo neste ecrã, por isso passou a ser reposta.
         // Ver a explicação completa em `SkySettingsTest`.
-        assertEquals(SkySettings.MIN_REFRESH_INTERVAL_MINUTES, settings.refreshIntervalMinutes)
+        assertEquals(SkySettings.DEFAULT_REFRESH_INTERVAL_MINUTES, settings.refreshIntervalMinutes)
         assertTrue("as notificações continuam sem controlo, logo sem serem repostas", settings.notificationsEnabled)
     }
 
@@ -285,7 +285,7 @@ class SettingsViewModelTest {
         runCurrent()
 
         assertEquals(
-            SkySettings.MIN_REFRESH_INTERVAL_MINUTES,
+            SkySettings.DEFAULT_REFRESH_INTERVAL_MINUTES,
             settingsRepository.settings.first().refreshIntervalMinutes,
         )
         coVerify(exactly = 1) { coordinator.reconcile() }

@@ -4,7 +4,6 @@ import com.mysky.app.di.DefaultDispatcher
 import com.mysky.app.domain.model.SkyError
 import com.mysky.app.domain.repository.LocationRepository
 import com.mysky.app.domain.repository.SettingsRepository
-import com.mysky.app.domain.time.TimeProvider
 import com.mysky.app.domain.usecase.RunSkyCycleUseCase
 import com.mysky.app.domain.usecase.SkyCyclePhase
 import com.mysky.app.domain.usecase.SkyCycleResult
@@ -59,7 +58,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 class SkySession @Inject constructor(
     private val runSkyCycle: RunSkyCycleUseCase,
     private val locationRepository: LocationRepository,
-    private val timeProvider: TimeProvider,
     @DefaultDispatcher dispatcher: CoroutineDispatcher,
     lifecycle: ActivityRetainedLifecycle,
 ) {
@@ -133,7 +131,6 @@ class SkySession @Inject constructor(
         }
     }
 
-    /** @return o erro desta iteração, ou `null` se correu bem ou se não havia nada a fazer. */
     /** @return o erro desta iteração, ou `null` se correu bem ou se não havia nada a fazer. */
     private suspend fun refreshOnce(): SkyError? {
         // A sequência do ciclo vive no `RunSkyCycleUseCase`, partilhada com o trabalho de fundo

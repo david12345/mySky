@@ -20,5 +20,12 @@ enum class RefreshFeedback { None, NoConnection, RateLimited }
  * A implementação vive em `widget/`, e é o `widget/` que depende do `worker/` — nunca o contrário.
  */
 interface WidgetRefresher {
-    suspend fun refreshAll(feedback: RefreshFeedback = RefreshFeedback.None)
+    /**
+     * @param clearPending limpa o indicador "a atualizar". **Só o pedido que o pôs lá o deve tirar**:
+     *   um ciclo periódico a terminar durante um pedido manual apagaria o indicador antes de tempo.
+     */
+    suspend fun refreshAll(
+        feedback: RefreshFeedback = RefreshFeedback.None,
+        clearPending: Boolean = false,
+    )
 }

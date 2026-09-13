@@ -8,6 +8,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.workDataOf
 import androidx.work.WorkManager
 import com.mysky.app.domain.model.SkySettings
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -67,10 +68,20 @@ class SkyWorkScheduler @Inject constructor(
      * `KEEP` e não `REPLACE`: dois toques enquanto um pedido está em curso valem por um (FR-017).
      * Com `REPLACE`, o segundo toque cancelaria a consulta já paga e começaria outra — gastando duas
      * do orçamento diário para obter um resultado.
+     *
+     * **Sem restrição de rede, ao contrário do trabalho periódico.** Com `NetworkType.CONNECTED`, um
+     * toque sem rede deixava o pedido em `ENQUEUED` para sempre: o worker nunca corria, ninguém
+     * limpava o "a atualizar", e o botão — que fica sem `clickable` enquanto atualiza — desaparecia
+     * funcionalmente até a rede voltar sozinha. Foi exatamente o defeito que a 003 teve no ecrã da
+     * tabela de rotas, repetido aqui.
+     *
+     * Verificar a rede antes de enfileirar só reduzia a probabilidade: a rede pode cair entre a
+     * verificação e a execução. Sem restrição, o worker corre sempre, falha depressa e diz porquê —
+     * a classe de erro deixa de existir em vez de ficar mais rara.
      */
     fun requestImmediateRefresh() {
         val request = OneTimeWorkRequestBuilder<SkyRefreshWorker>()
-            .setConstraints(networkRequired)
+            .setInputData(workDataOf(SkyRefreshWorker.KEY_MANUAL to true))
             .build()
 
         workManager.enqueueUniqueWork(

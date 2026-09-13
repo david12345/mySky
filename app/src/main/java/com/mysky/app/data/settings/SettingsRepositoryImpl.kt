@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.mysky.app.domain.model.AltitudeUnit
 import com.mysky.app.domain.model.DistanceUnit
@@ -78,6 +79,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 preferences[MIN_ALTITUDE] = updated.minAltitudeMeters
                 preferences[DISTANCE_UNIT] = updated.distanceUnit.name
                 preferences[ALTITUDE_UNIT] = updated.altitudeUnit.name
+                preferences[REFRESH_INTERVAL] = updated.refreshIntervalMinutes
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
@@ -99,6 +101,7 @@ class SettingsRepositoryImpl @Inject constructor(
             minAltitudeMeters = this[MIN_ALTITUDE] ?: defaults.minAltitudeMeters,
             distanceUnit = enumOrDefault(this[DISTANCE_UNIT], defaults.distanceUnit),
             altitudeUnit = enumOrDefault(this[ALTITUDE_UNIT], defaults.altitudeUnit),
+            refreshIntervalMinutes = this[REFRESH_INTERVAL] ?: defaults.refreshIntervalMinutes,
         )
     }
 
@@ -120,5 +123,16 @@ class SettingsRepositoryImpl @Inject constructor(
         val MIN_ALTITUDE = doublePreferencesKey("min_altitude_meters")
         val DISTANCE_UNIT = stringPreferencesKey("distance_unit")
         val ALTITUDE_UNIT = stringPreferencesKey("altitude_unit")
+
+        /**
+         * A cadência do widget.
+         *
+         * **Faltava**, e a revisão da 005 apanhou-o: o ecrã tinha um cursor, o ViewModel gravava, e
+         * esta classe descartava o valor em silêncio ao escrever — o trabalho de fundo corria sempre
+         * a 15 minutos, gastando o dobro do orçamento previsto, e o cursor voltava ao sítio sozinho.
+         * Nenhum teste o apanhou porque os testes do ecrã usam um repositório falso que guarda o
+         * objeto inteiro em memória, onde a lacuna não existe.
+         */
+        val REFRESH_INTERVAL = longPreferencesKey("refresh_interval_minutes")
     }
 }

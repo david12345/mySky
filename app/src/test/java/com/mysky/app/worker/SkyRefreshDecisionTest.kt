@@ -174,4 +174,47 @@ class SkyRefreshDecisionTest {
             )
         }
     }
+
+    // --- O pedido manual não pode ficar preso (defeito da revisão da 005) -----------------------
+
+    @Test
+    fun `um pedido manual sem rede termina em vez de reintentar`() {
+        // O defeito: com `retry`, o trabalho único fica a reintentar; enquanto não termina, o
+        // `ExistingWorkPolicy.KEEP` engole os toques seguintes e o utilizador fica sem forma de
+        // voltar a tentar, com o botão apagado. Quem pediu está a olhar para o ecrã — é ele quem
+        // decide se insiste.
+        val manual = SkyRefreshDecision.decide(
+            SkyCycleResult.Failure(SkyError.NoConnection), agora, isManual = true,
+        )
+
+        assertEquals(WorkOutcome.Success, manual.outcome)
+        assertEquals(RefreshFeedback.NoConnection, manual.feedback)
+        assertNull("uma falha nunca apaga o que estava lá", manual.snapshot)
+    }
+
+    @Test
+    fun `o ciclo periodico sem rede continua a reintentar`() {
+        // O simétrico: aqui não há ninguém a olhar, e o `retry` é o que faz a atualização acontecer
+        // assim que a rede voltar, sem esperar pelo período seguinte.
+        val periodico = SkyRefreshDecision.decide(
+            SkyCycleResult.Failure(SkyError.NoConnection), agora, isManual = false,
+        )
+
+        assertEquals(WorkOutcome.Retry, periodico.outcome)
+    }
+
+    @Test
+    fun `os transitorios todos terminam quando o pedido e manual`() {
+        listOf(
+            SkyError.NoConnection,
+            SkyError.LocationUnavailable,
+            SkyError.FlightServiceUnavailable(503),
+        ).forEach { erro ->
+            assertEquals(
+                "$erro tem de terminar num pedido manual, senão o botão fica preso",
+                WorkOutcome.Success,
+                SkyRefreshDecision.decide(SkyCycleResult.Failure(erro), agora, isManual = true).outcome,
+            )
+        }
+    }
 }

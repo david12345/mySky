@@ -27,7 +27,7 @@ object SkyRefreshDecision {
      * que faz os dados anteriores sobreviverem a um ciclo falhado (FR-014) — o widget continua a
      * mostrar o que tinha porque ninguém lhe mexeu.
      */
-    fun decide(result: SkyCycleResult, nowEpochSeconds: Long): Decision = when (result) {
+    fun decide(result: SkyCycleResult, nowEpochSeconds: Long, isManual: Boolean = false): Decision = when (result) {
         is SkyCycleResult.Success -> Decision(
             snapshot = snapshotOf(result.flights, result.observedAtEpochSeconds),
             outcome = WorkOutcome.Success,
@@ -51,10 +51,15 @@ object SkyRefreshDecision {
             },
             outcome = when (result.error) {
                 // Transitórios: o período seguinte, ou o backoff, resolvem.
+                //
+                // **Menos quando o pedido foi manual.** Aí o trabalho tem de terminar, não ficar a
+                // reintentar: enquanto não termina, o `ExistingWorkPolicy.KEEP` engole os toques
+                // seguintes e o utilizador fica sem forma de voltar a tentar. Quem pediu está a olhar
+                // para o ecrã e é ele quem decide se insiste.
                 SkyError.NoConnection,
                 SkyError.LocationUnavailable,
                 is SkyError.FlightServiceUnavailable,
-                -> WorkOutcome.Retry
+                -> if (isManual) WorkOutcome.Success else WorkOutcome.Retry
 
                 // Insistir num 429 gastaria orçamento exatamente quando ele já se esgotou (AD-010).
                 // `Success` porque o ciclo fez o que devia: descobriu que não há nada a fazer hoje.

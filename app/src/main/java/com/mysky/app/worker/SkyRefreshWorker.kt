@@ -32,9 +32,12 @@ class SkyRefreshWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
+        val isManual = inputData.getBoolean(KEY_MANUAL, false)
+
         val decision = SkyRefreshDecision.decide(
             result = runSkyCycle(),
             nowEpochSeconds = timeProvider.nowEpochSeconds(),
+            isManual = isManual,
         )
 
         // `null` significa "não toques no que lá está" — é o que faz uma falha nunca apagar o que o
@@ -45,7 +48,13 @@ class SkyRefreshWorker @AssistedInject constructor(
         // "a atualizar" e mostra a razão da falha. Repintar só quando havia snapshot novo deixaria o
         // widget preso em "A atualizar…" para sempre a seguir a uma falha — que foi exatamente o
         // defeito encontrado na feature 003, no ecrã da tabela de rotas.
-        widgetRefresher.refreshAll(decision.feedback)
+        // Só o pedido manual limpa o "a atualizar" e escreve o desfecho. Um ciclo periódico que
+        // termine enquanto o pedido do utilizador ainda corre apagaria o indicador antes de tempo,
+        // com o botão a piscar conforme a ordem de conclusão dos dois.
+        widgetRefresher.refreshAll(
+            feedback = if (isManual) decision.feedback else RefreshFeedback.None,
+            clearPending = isManual,
+        )
 
         return when (decision.outcome) {
             WorkOutcome.Success -> Result.success()
@@ -56,6 +65,9 @@ class SkyRefreshWorker @AssistedInject constructor(
 
     companion object {
         const val PERIODIC_WORK_NAME = "mysky_sky_refresh_periodic"
+
+        /** Distingue o toque do utilizador do ciclo periódico. Ver [SkyRefreshDecision.decide]. */
+        const val KEY_MANUAL = "manual"
         const val ONE_TIME_WORK_NAME = "mysky_sky_refresh_once"
     }
 }

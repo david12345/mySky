@@ -215,6 +215,55 @@ class SettingsRepositoryImplTest {
         assertEquals(origem.altitudeUnit, settings.altitudeUnit)
     }
 
+    // --- A cadência do widget (005), e porque este teste tem de existir aqui -------------------
+
+    @Test
+    fun `a cadencia escolhida sobrevive a gravacao`() = runTest {
+        // O defeito que a revisão da 005 apanhou, e que não tinha teste nenhum: esta classe gravava
+        // cinco chaves e a cadência não era uma delas. O cursor no ecrã movia-se, o ViewModel chamava
+        // `update`, e o valor era descartado em silêncio — o trabalho de fundo corria sempre a 15
+        // minutos, a gastar o dobro do orçamento previsto, e o cursor voltava sozinho ao sítio.
+        //
+        // Nenhum teste o apanhou porque os do ecrã usam `FakeSettingsRepository`, que guarda o objeto
+        // inteiro em memória e onde a lacuna simplesmente não existe. É por isso que este teste tem
+        // de estar aqui, sobre o DataStore verdadeiro.
+        val (store, scope) = storeOver(File(folder.root, "cadencia.preferences_pb"))
+        val repository = repository(store)
+
+        repository.update { it.copy(refreshIntervalMinutes = 90L) }
+
+        assertEquals(90L, repository.settings.first().refreshIntervalMinutes)
+        scope.cancel()
+    }
+
+    @Test
+    fun `a cadencia sobrevive a uma releitura do mesmo ficheiro`() = runTest {
+        // Gravar e ler na mesma instância podia passar com um cache em memória. O que interessa é
+        // que o valor esteja no disco.
+        val file = File(folder.root, "cadencia-persistida.preferences_pb")
+        val (primeiro, scope1) = storeOver(file)
+        repository(primeiro).update { it.copy(refreshIntervalMinutes = 45L) }
+        scope1.cancel()
+
+        val (segundo, scope2) = storeOver(file)
+        assertEquals(45L, repository(segundo).settings.first().refreshIntervalMinutes)
+        scope2.cancel()
+    }
+
+    @Test
+    fun `sem nada gravado a cadencia e a de origem e nao o minimo`() = runTest {
+        // 30 minutos, não os 15 do mínimo da plataforma. Eram a mesma constante, o que fazia o código
+        // contradizer em silêncio o que a especificação tinha decidido.
+        val (store, scope) = storeOver(File(folder.root, "origem.preferences_pb"))
+
+        assertEquals(
+            SkySettings.DEFAULT_REFRESH_INTERVAL_MINUTES,
+            repository(store).settings.first().refreshIntervalMinutes,
+        )
+        assertEquals(30L, SkySettings.DEFAULT_REFRESH_INTERVAL_MINUTES)
+        scope.cancel()
+    }
+
     // --- Falhas de leitura: tentar outra vez antes de desistir ----------------------------------
 
     /**

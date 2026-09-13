@@ -24,15 +24,17 @@ class GlanceWidgetRefresher @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : WidgetRefresher, WidgetPresenceCheck {
 
-    override suspend fun refreshAll(feedback: RefreshFeedback) {
+    override suspend fun refreshAll(feedback: RefreshFeedback, clearPending: Boolean) {
         try {
             // Limpar o "a atualizar" e escrever o desfecho **antes** de repintar, senão o repinte
             // mostrava o estado antigo. É a mesma armadilha que na 003 deixou um ecrã preso em
             // "A atualizar…" para sempre.
-            GlanceAppWidgetManager(context).getGlanceIds(SkyWidget::class.java).forEach { id ->
-                updateAppWidgetState(context, id) { preferences ->
-                    preferences[RefreshSkyWidgetAction.REFRESHING] = false
-                    preferences[RefreshSkyWidgetAction.LAST_FEEDBACK] = feedback.name
+            if (clearPending) {
+                GlanceAppWidgetManager(context).getGlanceIds(SkyWidget::class.java).forEach { id ->
+                    updateAppWidgetState(context, id) { preferences ->
+                        preferences[RefreshSkyWidgetAction.REFRESHING] = false
+                        preferences[RefreshSkyWidgetAction.LAST_FEEDBACK] = feedback.name
+                    }
                 }
             }
             SkyWidget().updateAll(context)

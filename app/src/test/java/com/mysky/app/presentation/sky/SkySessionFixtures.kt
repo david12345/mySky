@@ -61,7 +61,6 @@ fun skySession(
         timeProvider = timeProvider,
     ),
     locationRepository = locationRepository,
-    timeProvider = timeProvider,
     dispatcher = dispatcher,
     lifecycle = lifecycle,
 )
