@@ -42,6 +42,13 @@ object SkyRefreshDecision {
 
         is SkyCycleResult.Failure -> Decision(
             snapshot = null,
+            // Duas falhas com remédios diferentes merecem textos diferentes (FR-019). As restantes
+            // não têm nada de útil a dizer ao utilizador num espaço de três linhas.
+            feedback = when (result.error) {
+                SkyError.NoConnection -> RefreshFeedback.NoConnection
+                is SkyError.RateLimited -> RefreshFeedback.RateLimited
+                else -> RefreshFeedback.None
+            },
             outcome = when (result.error) {
                 // Transitórios: o período seguinte, ou o backoff, resolvem.
                 SkyError.NoConnection,
@@ -77,5 +84,9 @@ object SkyRefreshDecision {
         )
     }
 
-    data class Decision(val snapshot: SkyWidgetSnapshot?, val outcome: WorkOutcome)
+    data class Decision(
+        val snapshot: SkyWidgetSnapshot?,
+        val outcome: WorkOutcome,
+        val feedback: RefreshFeedback = RefreshFeedback.None,
+    )
 }

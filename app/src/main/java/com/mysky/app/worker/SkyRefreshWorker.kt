@@ -39,12 +39,13 @@ class SkyRefreshWorker @AssistedInject constructor(
 
         // `null` significa "não toques no que lá está" — é o que faz uma falha nunca apagar o que o
         // utilizador estava a ver (FR-014).
-        decision.snapshot?.let { snapshot ->
-            skyWidgetRepository.save(snapshot)
-            // Só se repinta quando há coisa nova para mostrar. Repintar sobre uma falha faria os
-            // widgets piscar sem nada mudar.
-            widgetRefresher.refreshAll()
-        }
+        decision.snapshot?.let { skyWidgetRepository.save(it) }
+
+        // Repinta **sempre**, mesmo quando falhou e mesmo quando não há nada novo. É o que limpa o
+        // "a atualizar" e mostra a razão da falha. Repintar só quando havia snapshot novo deixaria o
+        // widget preso em "A atualizar…" para sempre a seguir a uma falha — que foi exatamente o
+        // defeito encontrado na feature 003, no ecrã da tabela de rotas.
+        widgetRefresher.refreshAll(decision.feedback)
 
         return when (decision.outcome) {
             WorkOutcome.Success -> Result.success()

@@ -13,6 +13,7 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.height
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import com.mysky.app.R
 import com.mysky.app.domain.model.SkyWidgetState
+import com.mysky.app.worker.RefreshFeedback
 
 /**
  * O que se desenha para cada estado.
@@ -41,6 +43,8 @@ internal fun SkyWidgetContent(
     state: SkyWidgetState,
     freshnessText: String,
     onOpenApp: Action,
+    isRefreshing: Boolean = false,
+    feedback: RefreshFeedback = RefreshFeedback.None,
 ) {
     val context = LocalContext.current
 
@@ -96,6 +100,34 @@ internal fun SkyWidgetContent(
                 extra = state.count,
             )
         }
+
+        Spacer(modifier = GlanceModifier.height(6.dp))
+
+        // Visualmente distinto do corpo (FR-015): o corpo abre a app, isto não. Um widget em que
+        // tudo faz a mesma coisa não tem botão nenhum.
+        Text(
+            text = context.getString(
+                when {
+                    isRefreshing -> R.string.widget_refreshing
+                    feedback == RefreshFeedback.NoConnection -> R.string.widget_no_connection
+                    feedback == RefreshFeedback.RateLimited -> R.string.widget_rate_limited
+                    else -> R.string.widget_refresh
+                },
+            ),
+            style = TextStyle(
+                color = GlanceTheme.colors.primary,
+                fontWeight = FontWeight.Medium,
+            ),
+            modifier = if (isRefreshing) {
+                // Sem `clickable` enquanto atualiza: o `KEEP` do agendador já protege o orçamento,
+                // mas deixar o botão vivo convidaria a toques que não fazem nada visível.
+                GlanceModifier.padding(vertical = 4.dp)
+            } else {
+                GlanceModifier
+                    .padding(vertical = 4.dp)
+                    .clickable(actionRunCallback<RefreshSkyWidgetAction>())
+            },
+        )
     }
 }
 

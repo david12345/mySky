@@ -9,6 +9,7 @@ import com.mysky.app.domain.model.SkySettings
 import com.mysky.app.domain.repository.RouteTableRepository
 import com.mysky.app.domain.repository.SettingsRepository
 import com.mysky.app.presentation.sky.SkySession
+import com.mysky.app.worker.SkyBackgroundWorkCoordinator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ class SettingsViewModel @Inject constructor(
     private val routeTableRepository: RouteTableRepository,
     private val settingsRepository: SettingsRepository,
     private val skySession: SkySession,
+    private val backgroundWorkCoordinator: SkyBackgroundWorkCoordinator,
 ) : ViewModel() {
 
     private val tableInfo = MutableStateFlow(SettingsUiState())
@@ -58,8 +60,21 @@ class SettingsViewModel @Inject constructor(
 
     fun onMinAltitudeChanged(meters: Double) = updateCriteria { it.copy(minAltitudeMeters = meters) }
 
-    /** Repõe **só** o que é desta feature; a tabela de rotas fica onde está (AD-017). */
-    fun onResetToDefaults() = updateCriteria { it.withDefaults() }
+    /**
+     * Repõe **só** o que é ajustável neste ecrã; a tabela de rotas fica onde está (AD-017).
+     *
+     * Faz as duas coisas — acorda a sessão **e** reconcilia o trabalho de fundo — porque desde a 005
+     * o repor também devolve a cadência ao valor de origem. Chamar só `updateCriteria` deixaria o
+     * trabalho periódico agendado com a cadência antiga, e o ecrã a mostrar a nova: os dois a
+     * discordar, sem erro nenhum.
+     */
+    fun onResetToDefaults() {
+        viewModelScope.launch {
+            settingsRepository.update { it.withDefaults() }
+            skySession.requestRefresh()
+            backgroundWorkCoordinator.reconcile()
+        }
+    }
 
     // --- Unidades: gravam e não acordam nada ----------------------------------------------------
 
@@ -84,6 +99,27 @@ class SettingsViewModel @Inject constructor(
 
     private fun updatePresentation(transform: (SkySettings) -> SkySettings) {
         viewModelScope.launch { settingsRepository.update(transform) }
+    }
+
+    // --- Cadência: grava e reagenda o trabalho de fundo -------------------------------------------
+
+    fun onRefreshIntervalChanged(minutes: Long) = updateSchedule { it.copy(refreshIntervalMinutes = minutes) }
+
+    /**
+     * A terceira categoria de escrita deste ecrã, ao lado de "acorda a sessão" e "não acorda nada".
+     *
+     * Passa pelo `reconcile()` e **não** chama o agendador diretamente (AD-027): mudar a cadência
+     * também tem de respeitar a pergunta "isto devia sequer existir?". Chamar o agendador daqui criaria
+     * um segundo sítio a decidir isso, e um deles acabaria por discordar do outro.
+     *
+     * Não acorda a sessão: a cadência é do trabalho de fundo, não do laço de 30 s do ecrã (a armadilha
+     * que a AD-019 registou). Pedir dados por causa dela gastaria uma consulta para obter a mesma lista.
+     */
+    private fun updateSchedule(transform: (SkySettings) -> SkySettings) {
+        viewModelScope.launch {
+            settingsRepository.update(transform)
+            backgroundWorkCoordinator.reconcile()
+        }
     }
 
     // --- Tabela de rotas (003), inalterado -------------------------------------------------------

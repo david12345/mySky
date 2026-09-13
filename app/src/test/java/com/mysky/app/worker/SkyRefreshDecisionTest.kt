@@ -138,4 +138,40 @@ class SkyRefreshDecisionTest {
         assertEquals(WorkOutcome.Failure, decisao.outcome)
         assertNull(decisao.snapshot)
     }
+
+    // --- O que o widget diz sobre a última tentativa (FR-019) -----------------------------------
+
+    @Test
+    fun `sem ligacao e limite diario sao ditos de forma diferente`() {
+        // Um resolve-se ligando a rede, o outro só passa amanhã. Uma mensagem genérica deixaria o
+        // utilizador a mexer no Wi-Fi durante uma hora sem efeito nenhum.
+        assertEquals(
+            RefreshFeedback.NoConnection,
+            SkyRefreshDecision.decide(SkyCycleResult.Failure(SkyError.NoConnection), agora).feedback,
+        )
+        assertEquals(
+            RefreshFeedback.RateLimited,
+            SkyRefreshDecision.decide(SkyCycleResult.Failure(SkyError.RateLimited(60)), agora).feedback,
+        )
+    }
+
+    @Test
+    fun `um ciclo bem sucedido nao deixa mensagem de falha nenhuma`() {
+        // Se o feedback não fosse reposto, um "sem ligação" de há uma hora ficaria no widget depois
+        // de a rede voltar — uma resposta a uma pergunta que já ninguém fez.
+        val decisao = SkyRefreshDecision.decide(SkyCycleResult.Success(emptyList(), observadoEm), agora)
+
+        assertEquals(RefreshFeedback.None, decisao.feedback)
+    }
+
+    @Test
+    fun `falhas sem nada util a dizer nao inventam mensagem`() {
+        listOf(SkyError.LocationUnavailable, SkyError.Unexpected(RuntimeException())).forEach { erro ->
+            assertEquals(
+                "não há texto útil para $erro em três linhas de widget",
+                RefreshFeedback.None,
+                SkyRefreshDecision.decide(SkyCycleResult.Failure(erro), agora).feedback,
+            )
+        }
+    }
 }

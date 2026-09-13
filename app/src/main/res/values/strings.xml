@@ -21,6 +21,11 @@
     <!-- Passado: um avião atravessa o céu em 4 a 5 minutos. -->
     <string name="widget_stale_detail">Estava a %1$d° %2$s</string>
     <string name="widget_more_flights">+%1$d</string>
+    <string name="widget_refresh">Atualizar</string>
+    <string name="widget_refreshing">A atualizar…</string>
+    <!-- Duas falhas com remédios diferentes: uma resolve-se ligando a rede, a outra só passa amanhã. -->
+    <string name="widget_no_connection">Sem ligação</string>
+    <string name="widget_rate_limited">Limite diário atingido</string>
 
     <!-- Rationale das permissões: mostrado ANTES do diálogo do sistema. -->
     <string name="permission_location_rationale">Para saber que aviões estão sobre ti, a mySky precisa da tua localização. A posição é usada apenas no teu dispositivo, para calcular a distância e o ângulo até cada avião.</string>
@@ -149,6 +154,16 @@
     <string name="settings_unit_feet">Pés</string>
     <string name="settings_at_default">de origem</string>
     <string name="settings_reset">Repor valores de origem</string>
+
+    <!-- Cadência do widget (005-sky-widget) -->
+    <string name="settings_section_widget">Widget</string>
+    <string name="settings_refresh_interval">Atualizar o widget</string>
+    <string name="settings_refresh_interval_help">De quanto em quanto tempo o widget procura aviões, quando está no ecrã inicial. O Android pode adiar mais.</string>
+    <string name="settings_minutes">%1$d min</string>
+    <!-- O custo que o utilizador não tem como descobrir sozinho: o widget e o ecrã partilham o
+         mesmo orçamento diário de consultas. -->
+    <string name="settings_budget_cost">%1$d consultas por dia (%2$d%%). Sobram cerca de %3$s de ecrã aberto.</string>
+    <string name="settings_hours_minutes">%1$dh%2$02d</string>
     <string name="settings_range_warning">Com este ângulo, mesmo o tráfego mais alto só se vê até %1$s. Aumentar o raio além disso não traz aviões novos.</string>
     <string name="settings_degrees">%1$s°</string>
 </resources>

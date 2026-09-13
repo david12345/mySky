@@ -3,6 +3,8 @@ package com.mysky.app.widget
 import android.content.Context
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
+import androidx.glance.appwidget.state.updateAppWidgetState
+import com.mysky.app.worker.RefreshFeedback
 import com.mysky.app.worker.WidgetPresenceCheck
 import com.mysky.app.worker.WidgetRefresher
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,8 +24,17 @@ class GlanceWidgetRefresher @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : WidgetRefresher, WidgetPresenceCheck {
 
-    override suspend fun refreshAll() {
+    override suspend fun refreshAll(feedback: RefreshFeedback) {
         try {
+            // Limpar o "a atualizar" e escrever o desfecho **antes** de repintar, senão o repinte
+            // mostrava o estado antigo. É a mesma armadilha que na 003 deixou um ecrã preso em
+            // "A atualizar…" para sempre.
+            GlanceAppWidgetManager(context).getGlanceIds(SkyWidget::class.java).forEach { id ->
+                updateAppWidgetState(context, id) { preferences ->
+                    preferences[RefreshSkyWidgetAction.REFRESHING] = false
+                    preferences[RefreshSkyWidgetAction.LAST_FEEDBACK] = feedback.name
+                }
+            }
             SkyWidget().updateAll(context)
         } catch (cancellation: CancellationException) {
             throw cancellation

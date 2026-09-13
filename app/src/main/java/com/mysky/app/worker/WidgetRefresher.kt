@@ -1,7 +1,16 @@
 package com.mysky.app.worker
 
 /**
- * Manda repintar todos os widgets no ecrã.
+ * O que dizer ao utilizador sobre a última tentativa, no widget.
+ *
+ * Duas falhas distintas e não uma genérica (FR-019): "sem ligação" resolve-se ligando a rede, "limite
+ * diário atingido" só passa amanhã. Dizer "não foi possível atualizar" nos dois casos deixaria o
+ * utilizador a tentar ligar o Wi-Fi durante uma hora sem efeito nenhum.
+ */
+enum class RefreshFeedback { None, NoConnection, RateLimited }
+
+/**
+ * Manda repintar todos os widgets no ecrã, e diz-lhes como correu a última tentativa.
  *
  * Existe como interface, e sem um único tipo do Glance na assinatura, para o `worker/` **não**
  * importar `androidx.glance` (AD-025). Importá-lo acoplaria um componente de fundo — testável na JVM
@@ -10,6 +19,6 @@ package com.mysky.app.worker
  *
  * A implementação vive em `widget/`, e é o `widget/` que depende do `worker/` — nunca o contrário.
  */
-fun interface WidgetRefresher {
-    suspend fun refreshAll()
+interface WidgetRefresher {
+    suspend fun refreshAll(feedback: RefreshFeedback = RefreshFeedback.None)
 }

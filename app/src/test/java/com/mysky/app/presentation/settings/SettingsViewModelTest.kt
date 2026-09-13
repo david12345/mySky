@@ -12,8 +12,10 @@ import com.mysky.app.domain.repository.RouteTableRepository
 import com.mysky.app.domain.usecase.ObserveSkyUseCase
 import com.mysky.app.presentation.sky.FakeSettingsRepository
 import com.mysky.app.presentation.sky.skySession
+import com.mysky.app.worker.SkyBackgroundWorkCoordinator
 import io.mockk.coEvery
 import io.mockk.every
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +50,7 @@ class SettingsViewModelTest {
     private val routeTableRepository = mockk<RouteTableRepository>(relaxed = true)
     private val settingsRepository = FakeSettingsRepository()
     private val requests = java.util.concurrent.atomic.AtomicInteger()
+    private val coordinator = mockk<SkyBackgroundWorkCoordinator>(relaxed = true)
 
     init {
         every { locationRepository.hasLocationPermission() } returns true
@@ -70,7 +73,7 @@ class SettingsViewModelTest {
         // A sessão só corre com alguém a observá-la; é o que faz o `requestRefresh` ter efeito
         // visível nos testes, como no ecrã real.
         backgroundScope.launch { session.observation.collect {} }
-        return SettingsViewModel(routeTableRepository, settingsRepository, session)
+        return SettingsViewModel(routeTableRepository, settingsRepository, session, coordinator)
     }
 
     // --- Invariante 1: uma alteração de critério grava e acorda o laço ---------------------------
@@ -236,6 +239,69 @@ class SettingsViewModelTest {
 
         assertEquals(SkySettings.RADIUS_RANGE, SkySettings.RADIUS_RANGE)
         assertEquals(comAnguloBaixo.coerced().detectionRadiusMeters, comAnguloAlto.coerced().detectionRadiusMeters, 0.001)
+    }
+
+    // --- Invariante 9: a cadência reagenda o fundo e não acorda o ecrã (005) --------------------
+
+    @Test
+    fun `alterar a cadencia reagenda o trabalho de fundo`() = runTest(mainDispatcherRule.testContext) {
+        val viewModel = viewModel()
+        runCurrent(); advanceTimeBy(1); runCurrent()
+        val antes = requests.get()
+
+        viewModel.onRefreshIntervalChanged(60L)
+        runCurrent()
+
+        assertEquals(60L, settingsRepository.settings.first().refreshIntervalMinutes)
+        coVerify(exactly = 1) { coordinator.reconcile() }
+        // A cadência é do trabalho de fundo, não do laço de 30 s do ecrã (a armadilha da AD-019).
+        // Pedir dados por causa dela gastaria uma consulta para obter exatamente a mesma lista.
+        assertEquals("a cadência não pode custar um pedido", antes, requests.get())
+    }
+
+    @Test
+    fun `alterar um criterio nao reagenda o trabalho de fundo`() = runTest(mainDispatcherRule.testContext) {
+        // O simétrico: mexer no raio não tem nada que ver com a cadência do widget. Reagendar aqui
+        // substituiria o trabalho periódico e reiniciaria a contagem do período, sem razão nenhuma.
+        val viewModel = viewModel()
+        runCurrent()
+
+        viewModel.onRadiusChanged(80_000.0)
+        runCurrent()
+
+        coVerify(exactly = 0) { coordinator.reconcile() }
+    }
+
+    @Test
+    fun `repor faz as duas coisas, porque tambem repoe a cadencia`() = runTest(mainDispatcherRule.testContext) {
+        // Desde a 005 o repor devolve a cadência ao valor de origem. Se só acordasse a sessão, o
+        // trabalho periódico ficava agendado com a cadência antiga e o ecrã mostrava a nova — os dois
+        // a discordar, sem erro nenhum.
+        val viewModel = viewModel()
+        settingsRepository.set(SkySettings(refreshIntervalMinutes = 120L))
+        runCurrent()
+
+        viewModel.onResetToDefaults()
+        runCurrent()
+
+        assertEquals(
+            SkySettings.MIN_REFRESH_INTERVAL_MINUTES,
+            settingsRepository.settings.first().refreshIntervalMinutes,
+        )
+        coVerify(exactly = 1) { coordinator.reconcile() }
+    }
+
+    @Test
+    fun `o estado mostra o custo da cadencia escolhida`() = runTest(mainDispatcherRule.testContext) {
+        val viewModel = viewModel()
+        settingsRepository.set(SkySettings(refreshIntervalMinutes = 30L))
+
+        viewModel.uiState.test {
+            val state = awaitItemWhere { it.settings.refreshIntervalMinutes == 30L }
+            assertEquals(48, state.widgetQueriesPerDay)
+            assertEquals(352 * 30L, state.remainingScreenSeconds)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     private suspend fun app.cash.turbine.ReceiveTurbine<SettingsUiState>.awaitItemWhere(

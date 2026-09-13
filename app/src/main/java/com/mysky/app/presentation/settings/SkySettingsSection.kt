@@ -24,6 +24,8 @@ import com.mysky.app.domain.model.DistanceUnit
 import com.mysky.app.domain.model.SkySettings
 import com.mysky.app.presentation.format.FlightFormatting
 import com.mysky.app.presentation.format.UnitLabels
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 
 /**
  * Os controlos do que conta como "o meu céu".
@@ -213,3 +215,46 @@ private fun <T> UnitRow(
         }
     }
 }
+
+/**
+ * A cadência do widget, com o preço ao lado.
+ *
+ * O preço não é decoração: o widget e o ecrã bebem do **mesmo** orçamento diário, e sem isto o
+ * utilizador escolhe "de 15 em 15 minutos" e descobre semanas depois que a app deixa de atualizar
+ * mais cedo à tarde, sem relação aparente com a escolha que fez (FR-027).
+ */
+@Composable
+fun WidgetScheduleSection(
+    state: SettingsUiState,
+    onRefreshIntervalChanged: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val minutes = state.settings.refreshIntervalMinutes
+
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SettingSlider(
+            label = stringResource(R.string.settings_refresh_interval),
+            help = stringResource(R.string.settings_refresh_interval_help),
+            value = minutes.toDouble(),
+            range = SkySettings.REFRESH_INTERVAL_RANGE.first.toDouble()..SkySettings.REFRESH_INTERVAL_RANGE.last.toDouble(),
+            atDefault = minutes == SkySettings.MIN_REFRESH_INTERVAL_MINUTES,
+            valueText = stringResource(R.string.settings_minutes, minutes.toInt()),
+            onValueSettled = { onRefreshIntervalChanged(it.roundToLong()) },
+        )
+
+        Text(
+            text = stringResource(
+                R.string.settings_budget_cost,
+                state.widgetQueriesPerDay,
+                (state.widgetBudgetShare * 100).roundToInt(),
+                formatDuration(state.remainingScreenSeconds),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun formatDuration(seconds: Long): String =
+    stringResource(R.string.settings_hours_minutes, seconds / 3600, (seconds % 3600) / 60)

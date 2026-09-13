@@ -1,6 +1,7 @@
 package com.mysky.app.presentation.settings
 
 import com.mysky.app.domain.model.RouteUpdateState
+import com.mysky.app.domain.model.SkyBudget
 import com.mysky.app.domain.model.SkyRange
 import com.mysky.app.domain.model.SkySettings
 
@@ -39,6 +40,30 @@ data class SettingsUiState(
             radiusMeters = settings.detectionRadiusMeters,
             minElevationDegrees = settings.minElevationDegrees,
         )
+
+    // --- O que a cadência do widget custa (005-sky-widget) --------------------------------------
+
+    /**
+     * Consultas por dia que o trabalho de fundo gasta com a cadência escolhida.
+     *
+     * Derivado do `SkyBudget` e não recalculado aqui (AD-027). O orçamento de 400 vive num sítio só:
+     * o defeito que a revisão da 004 encontrou foi um número escrito de duas maneiras que divergiu.
+     */
+    val widgetQueriesPerDay: Int
+        get() = SkyBudget.queriesPerDay(settings.refreshIntervalMinutes)
+
+    /** Fatia do orçamento diário, entre 0 e 1. */
+    val widgetBudgetShare: Double
+        get() = SkyBudget.budgetShare(settings.refreshIntervalMinutes)
+
+    /**
+     * Quanto tempo de ecrã aberto sobra por dia depois de o widget se servir.
+     *
+     * É o número que o utilizador não tem como descobrir sozinho: escolhe uma cadência mais
+     * frequente e, semanas depois, a app deixa de atualizar mais cedo à tarde sem relação aparente.
+     */
+    val remainingScreenSeconds: Long
+        get() = SkyBudget.remainingScreenSeconds(settings.refreshIntervalMinutes)
 
     /** Quais os valores que estão como vieram de fábrica (FR-012). */
     val isRadiusAtDefault: Boolean

@@ -7,10 +7,13 @@ import androidx.glance.GlanceTheme
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
+import androidx.glance.currentState
+import androidx.datastore.preferences.core.Preferences
 import com.mysky.app.R
 import com.mysky.app.domain.model.SkyWidgetState
 import com.mysky.app.presentation.format.FlightFormatting
 import com.mysky.app.presentation.format.Freshness
+import com.mysky.app.worker.RefreshFeedback
 import kotlinx.coroutines.flow.first
 
 /**
@@ -36,10 +39,20 @@ class SkyWidget : GlanceAppWidget() {
 
         provideContent {
             GlanceTheme {
+                // Lido aqui dentro porque `currentState` é `@Composable`. É o estado efémero **desta**
+                // instância — não do céu, e não partilhado com os outros widgets (AD-023).
+                val ephemeral = currentState<Preferences>()
+                val isRefreshing = ephemeral[RefreshSkyWidgetAction.REFRESHING] == true
+                val feedback = ephemeral[RefreshSkyWidgetAction.LAST_FEEDBACK]
+                    ?.let { name -> runCatching { RefreshFeedback.valueOf(name) }.getOrNull() }
+                    ?: RefreshFeedback.None
+
                 SkyWidgetContent(
                     state = state,
                     freshnessText = freshnessText,
                     onOpenApp = actionStartActivity(mainActivityComponent(context)),
+                    isRefreshing = isRefreshing,
+                    feedback = feedback,
                 )
             }
         }

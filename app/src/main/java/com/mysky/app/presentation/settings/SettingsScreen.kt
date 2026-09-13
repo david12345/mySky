@@ -105,6 +105,18 @@ fun SettingsScreen(
                 onAltitudeUnitChanged = viewModel::onAltitudeUnitChanged,
             )
 
+            Spacer(Modifier.padding(4.dp))
+            Text(
+                text = stringResource(R.string.settings_section_widget),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            HorizontalDivider()
+
+            WidgetScheduleSection(
+                state = state,
+                onRefreshIntervalChanged = viewModel::onRefreshIntervalChanged,
+            )
+
             OutlinedButton(
                 onClick = viewModel::onResetToDefaults,
                 enabled = !state.isAtDefaults,
