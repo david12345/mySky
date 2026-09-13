@@ -751,6 +751,38 @@ A revisão encontrou **dois bloqueadores**, ambos meus:
 **Falta a validação em dispositivo** (`specs/005-sky-widget/quickstart.md`), com prioridade para a
 secção 4 — o widget partido da v1.0.0 a recuperar sozinho, que só é reproduzível a partir dessa versão.
 
+**`006-overhead-notifications` implementada.** A app avisa quando um ciclo de fundo encontra uma
+aeronave acima do limiar: uma por ciclo, uma por passagem, desligada de origem.
+
+**387 testes unitários verdes**, lint sem erros. **Fecha as quatro features do MVP.**
+
+Como na 005, a feature abre por admitir o que não consegue: com sondagem de 15 a 30 minutos, avisa de
+**9% a 18% das passagens**. Uma aeronave fica acima de 30° durante 166 segundos, e acima de 60° durante
+55 — menos do que o tempo de tirar o telefone do bolso, e é por isso que o limiar de origem são 30° e
+não os 60° da intuição. Nenhum desenho o resolve sem um serviço em primeiro plano permanente, que a
+constituição proíbe.
+
+A diferença face ao widget é o **tipo** de erro: aqui é só de omissão. Quando o aviso dispara, o avião
+está mesmo lá. Por isso o ecrã mostra a taxa esperada **antes** de o utilizador ligar a opção — quem
+ligue sem saber recebe dois avisos por semana e conclui que está avariado, e conclui bem.
+
+**Corrigiu um defeito grave da 005** (AD-029): `ACCESS_BACKGROUND_LOCATION` estava declarada no
+manifesto desde o esqueleto e **nunca era pedida nem verificada**. Desde a API 29 isso impede o worker
+de obter posição com a app fechada — o único cenário que interessa a um widget — e a tabela de decisão
+mandava `retry`: acordar, falhar, reintentar, indefinidamente. Os 345 testes da 005 não o apanharam
+porque a JVM não tem sistema de permissões.
+
+A revisão encontrou dois bloqueadores, **ambos na fronteira do Compose**, que é onde os testes desta app
+não chegam: o interruptor das notificações estava ligado à intenção guardada em vez do estado efetivo,
+e uma notificação tocada com a app viva não abria o detalhe (faltava `onNewIntent`; o Navigation só
+consome deep links no arranque).
+
+**A lição que atravessa as duas features:** o estado, o ViewModel e os testes podem estar todos certos e
+a app estar errada, se o Compose ler o campo ao lado. Os testes de JVM deste projeto já não conseguem
+apanhar a categoria de defeito mais provável que lhe resta.
+
+**Falta a validação em dispositivo** de ambas as features.
+
 ## Primeira release
 
 **v1.0.0**, com APK assinado. A chave vive em `~/.mysky/mysky-release.jks`, fora do repositório, e as
