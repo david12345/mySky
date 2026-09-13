@@ -6,6 +6,7 @@ import com.mysky.app.domain.repository.LocationRepository
 import com.mysky.app.domain.repository.SettingsRepository
 import com.mysky.app.domain.time.TimeProvider
 import com.mysky.app.domain.usecase.ObserveSkyUseCase
+import com.mysky.app.domain.usecase.RunSkyCycleUseCase
 import dagger.hilt.android.ActivityRetainedLifecycle
 import dagger.hilt.android.lifecycle.RetainedLifecycle
 import kotlinx.coroutines.CoroutineDispatcher
@@ -48,9 +49,18 @@ fun skySession(
     lifecycle: ActivityRetainedLifecycle = FakeRetainedLifecycle(),
     settingsRepository: SettingsRepository = FakeSettingsRepository(),
 ): SkySession = SkySession(
-    observeSky = observeSky,
+    // O caso de uso **real** sobre os mesmos duplos, e não um duplo dele: a assinatura da sessão
+    // mudou na 005 quando o ciclo saiu para o domínio (AD-028), mas o que estes testes protegem é o
+    // comportamento de ponta a ponta. Trocá-lo por um mock aqui esvaziaria exatamente a garantia que
+    // torna o refactor seguro — e nenhuma asserção de nenhum teste precisou de mudar, que é o sinal
+    // de que o comportamento observável ficou igual.
+    runSkyCycle = RunSkyCycleUseCase(
+        locationRepository = locationRepository,
+        settingsRepository = settingsRepository,
+        observeSky = observeSky,
+        timeProvider = timeProvider,
+    ),
     locationRepository = locationRepository,
-    settingsRepository = settingsRepository,
     timeProvider = timeProvider,
     dispatcher = dispatcher,
     lifecycle = lifecycle,

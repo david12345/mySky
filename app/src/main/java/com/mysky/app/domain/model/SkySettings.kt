@@ -42,7 +42,7 @@ data class SkySettings(
         detectionRadiusMeters = detectionRadiusMeters.coerceIn(RADIUS_RANGE),
         minElevationDegrees = minElevationDegrees.coerceIn(MIN_ELEVATION_RANGE),
         minAltitudeMeters = minAltitudeMeters.coerceIn(MIN_ALTITUDE_RANGE),
-        refreshIntervalMinutes = refreshIntervalMinutes.coerceAtLeast(MIN_REFRESH_INTERVAL_MINUTES),
+        refreshIntervalMinutes = refreshIntervalMinutes.coerceIn(REFRESH_INTERVAL_RANGE),
     )
 
     /** Repõe **só** os campos ajustáveis no ecrã de definições, deixando os outros como estão. */
@@ -52,11 +52,27 @@ data class SkySettings(
         minAltitudeMeters = OverheadCriteria.DEFAULT_MIN_ALTITUDE_METERS,
         distanceUnit = DistanceUnit.KILOMETERS,
         altitudeUnit = AltitudeUnit.METERS,
+        // Entrou na 005, quando a cadência ganhou controlo no ecrã. A regra desta função não mudou —
+        // "os campos ajustáveis no ecrã" — mudou o conjunto a que ela se aplica. Deixá-la de fora
+        // faria o botão repor tudo menos uma coisa, sem o utilizador ter como saber qual.
+        refreshIntervalMinutes = MIN_REFRESH_INTERVAL_MINUTES,
     )
 
     companion object {
         /** Mínimo imposto pelo Android para `PeriodicWorkRequest`. */
         const val MIN_REFRESH_INTERVAL_MINUTES = 15L
+
+        /**
+         * Cadência do trabalho de fundo do widget, em minutos.
+         *
+         * O mínimo é o que o Android impõe a trabalho periódico e não é negociável. O máximo de três
+         * horas é onde o widget deixa de ter utilidade prática — com uma cadência maior, o que ele
+         * mostra está sempre tão velho que mais valia não estar lá.
+         *
+         * Entra no [coerced] como todos os outros limites (AD-022), e é isso que dispensa o
+         * agendador de validar seja o que for: ele nunca vê um valor por corrigir (FR-026).
+         */
+        val REFRESH_INTERVAL_RANGE = MIN_REFRESH_INTERVAL_MINUTES..180L
 
         /**
          * Os limites de cada valor, e o **único** ponto de verdade sobre eles.

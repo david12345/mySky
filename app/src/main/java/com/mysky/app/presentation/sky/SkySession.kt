@@ -5,7 +5,9 @@ import com.mysky.app.domain.model.SkyError
 import com.mysky.app.domain.repository.LocationRepository
 import com.mysky.app.domain.repository.SettingsRepository
 import com.mysky.app.domain.time.TimeProvider
-import com.mysky.app.domain.usecase.ObserveSkyUseCase
+import com.mysky.app.domain.usecase.RunSkyCycleUseCase
+import com.mysky.app.domain.usecase.SkyCyclePhase
+import com.mysky.app.domain.usecase.SkyCycleResult
 import dagger.hilt.android.ActivityRetainedLifecycle
 import dagger.hilt.android.scopes.ActivityRetainedScoped
 import javax.inject.Inject
@@ -55,9 +57,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 @ActivityRetainedScoped
 class SkySession @Inject constructor(
-    private val observeSky: ObserveSkyUseCase,
+    private val runSkyCycle: RunSkyCycleUseCase,
     private val locationRepository: LocationRepository,
-    private val settingsRepository: SettingsRepository,
     private val timeProvider: TimeProvider,
     @DefaultDispatcher dispatcher: CoroutineDispatcher,
     lifecycle: ActivityRetainedLifecycle,
@@ -133,7 +134,12 @@ class SkySession @Inject constructor(
     }
 
     /** @return o erro desta iteração, ou `null` se correu bem ou se não havia nada a fazer. */
+    /** @return o erro desta iteração, ou `null` se correu bem ou se não havia nada a fazer. */
     private suspend fun refreshOnce(): SkyError? {
+        // A sequência do ciclo vive no `RunSkyCycleUseCase`, partilhada com o trabalho de fundo
+        // (AD-028). O que fica aqui é a **política desta sessão**: as fases que o ecrã mostra, a
+        // sequência de observação e a lista anterior que sobrevive a uma falha. Nada disso pertence a
+        // um ciclo — pertence a quem o mostra.
         if (!locationRepository.hasLocationPermission()) {
             // Sem permissão não há ciclo nenhum a correr, e a fase não pode ficar presa a
             // "a carregar" — o estado é partilhado e não pode mentir a quem o leia noutro ecrã.
@@ -143,48 +149,47 @@ class SkySession @Inject constructor(
         }
         skippedForPermission = false
 
-        mutableState.update { it.copy(phase = LoadPhase.LocatingUser) }
-
-        // Uma posição pontual por ciclo, em vez de localização contínua: cobre o utilizador em
-        // movimento por uma fração do custo de bateria.
-        val observer = locationRepository.getCurrentLocation()
-        if (observer == null) {
-            // O repositório devolve `null` em vez de falhar, por isso é aqui — e só aqui — que
-            // nasce esta variante. Sem ela, "sem GPS" seria indistinguível de "sem rede".
-            return SkyError.LocationUnavailable.also { error ->
-                mutableState.update { it.copy(phase = LoadPhase.Idle, lastError = error) }
+        val result = runSkyCycle { phase ->
+            mutableState.update {
+                it.copy(
+                    phase = when (phase) {
+                        SkyCyclePhase.LocatingUser -> LoadPhase.LocatingUser
+                        SkyCyclePhase.LoadingFlights -> LoadPhase.LoadingFlights
+                    },
+                )
             }
         }
 
-        mutableState.update { it.copy(phase = LoadPhase.LoadingFlights) }
-
-        // Uma leitura pontual, no início do ciclo, e não uma subscrição viva (AD-018). O ciclo
-        // trabalha com este snapshot do princípio ao fim: como os critérios são um `data class`
-        // passado por valor ao caso de uso, uma lista com critérios misturados é estruturalmente
-        // impossível — não há nada para alguém se lembrar de fazer.
-        val criteria = settingsRepository.settings.first().toCriteria()
-
-        return observeSky(observer, criteria).fold(
-            onSuccess = { flights ->
+        return when (result) {
+            is SkyCycleResult.Success -> {
                 mutableState.update {
                     it.copy(
                         phase = LoadPhase.Idle,
                         observationSequence = it.observationSequence + 1,
-                        flights = flights,
-                        lastUpdatedEpochSeconds = timeProvider.nowEpochSeconds(),
+                        flights = result.flights,
+                        lastUpdatedEpochSeconds = result.observedAtEpochSeconds,
                         lastError = null,
                     )
                 }
                 null
-            },
-            onFailure = { throwable ->
-                val error = throwable as? SkyError ?: SkyError.Unexpected(throwable)
+            }
+
+            // A sessão já verificou a permissão acima, por isso este ramo só é alcançável se ela for
+            // revogada a meio do ciclo. Tratado como o caso acima e não como erro: não há nada a
+            // mostrar ao utilizador que ele não veja já no ecrã de permissão.
+            SkyCycleResult.NoPermission -> {
+                skippedForPermission = true
+                mutableState.update { it.copy(phase = LoadPhase.Idle) }
+                null
+            }
+
+            is SkyCycleResult.Failure -> {
                 // A lista anterior fica: uma falha assinala dados possivelmente desatualizados,
                 // não apaga o que o utilizador já estava a ler.
-                mutableState.update { it.copy(phase = LoadPhase.Idle, lastError = error) }
-                error
-            },
-        )
+                mutableState.update { it.copy(phase = LoadPhase.Idle, lastError = result.error) }
+                result.error
+            }
+        }
     }
 
     private companion object {

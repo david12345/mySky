@@ -1,5 +1,7 @@
 package com.mysky.app.domain.model
 
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -78,8 +80,13 @@ class SkySettingsTest {
 
     @Test
     fun `repor nao toca no que pertence a outras features`() {
-        // O intervalo do trabalho periódico é do widget; as notificações e o widget são das suas
-        // features. Estão na mesma classe, o que os torna fáceis de arrastar por engano (FR-015).
+        // **Alterado na 005.** Este teste afirmava que `refreshIntervalMinutes` sobrevivia ao repor, e
+        // estava certo enquanto esse campo não tinha controlo em lado nenhum: repor um valor que o
+        // utilizador nunca pôde escolher não fazia sentido. A 005 deu-lhe um cursor no mesmo ecrã, e a
+        // regra de `withDefaults` — "os campos ajustáveis no ecrã" — passou a abrangê-lo. Deixá-lo de
+        // fora faria o botão repor tudo menos uma coisa, sem o utilizador ter como saber qual.
+        //
+        // `notificationsEnabled` e `widgetEnabled` continuam de fora porque continuam sem controlo.
         val doutrasFeatures = defaults.copy(
             refreshIntervalMinutes = 45L,
             notificationsEnabled = true,
@@ -89,7 +96,7 @@ class SkySettingsTest {
 
         val reposto = doutrasFeatures.withDefaults()
 
-        assertEquals(45L, reposto.refreshIntervalMinutes)
+        assertEquals(SkySettings.MIN_REFRESH_INTERVAL_MINUTES, reposto.refreshIntervalMinutes)
         assertEquals(true, reposto.notificationsEnabled)
         assertEquals(false, reposto.widgetEnabled)
         assertEquals(SkySettings().detectionRadiusMeters, reposto.detectionRadiusMeters, 0.001)
@@ -129,5 +136,51 @@ class SkySettingsTest {
 
         assertEquals(minimos, minimos.coerced())
         assertEquals(maximos, maximos.coerced())
+    }
+
+    // --- A cadência do trabalho de fundo (005-sky-widget) ---------------------------------------
+
+    @Test
+    fun `uma cadencia abaixo do minimo da plataforma sobe para o minimo`() {
+        // O mínimo não é preferência nossa: é o que o Android impõe a trabalho periódico. Um valor
+        // abaixo dele produziria um agendamento que o sistema silenciosamente reescreve, e a app
+        // passaria a mostrar ao utilizador uma cadência que não é a real.
+        val abaixo = SkySettings(refreshIntervalMinutes = 5L).coerced()
+
+        assertEquals(SkySettings.MIN_REFRESH_INTERVAL_MINUTES, abaixo.refreshIntervalMinutes)
+    }
+
+    @Test
+    fun `uma cadencia acima do maximo desce para o maximo`() {
+        val acima = SkySettings(refreshIntervalMinutes = 10_000L).coerced()
+
+        assertEquals(SkySettings.REFRESH_INTERVAL_RANGE.last, acima.refreshIntervalMinutes)
+    }
+
+    @Test
+    fun `as fronteiras da cadencia passam intactas`() {
+        val minimo = SkySettings(refreshIntervalMinutes = SkySettings.REFRESH_INTERVAL_RANGE.first)
+        val maximo = SkySettings(refreshIntervalMinutes = SkySettings.REFRESH_INTERVAL_RANGE.last)
+
+        assertEquals(minimo, minimo.coerced())
+        assertEquals(maximo, maximo.coerced())
+    }
+
+    @Test
+    fun `repor devolve tambem a cadencia ao valor de origem`() {
+        // Mudou na 005. A regra de `withDefaults` sempre foi "os campos ajustáveis no ecrã"; a
+        // cadência passou a ser um deles quando ganhou controlo.
+        val mexido = SkySettings(refreshIntervalMinutes = 120L)
+
+        assertEquals(SkySettings.MIN_REFRESH_INTERVAL_MINUTES, mexido.withDefaults().refreshIntervalMinutes)
+    }
+
+    @Test
+    fun `repor continua a nao tocar no que ainda nao tem controlo`() {
+        // `notificationsEnabled` pertence à feature seguinte e ainda não é ajustável em lado nenhum.
+        val mexido = SkySettings(notificationsEnabled = true, widgetEnabled = false)
+
+        assertTrue(mexido.withDefaults().notificationsEnabled)
+        assertFalse(mexido.withDefaults().widgetEnabled)
     }
 }
