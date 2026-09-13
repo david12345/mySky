@@ -609,6 +609,38 @@ de consultas não depende do raio. O custo é determinado pela área da caixa en
 raio utilizável — até ~246 km — fica no primeiro degrau. O teto real da app, que nunca esteve escrito
 em lado nenhum, são cerca de **3h20m de ecrã aberto por dia**, e nenhuma definição o altera.
 
+**`005-sky-widget` implementada.** O widget de ecrã inicial mostra a aeronave mais alta que o
+trabalho de fundo encontrou, **sempre com o instante da observação**, com toque para atualizar e
+cadência escolhida nas definições. O trabalho de fundo existe se e só se houver widget no ecrã.
+
+**345 testes unitários verdes**, lint sem erros.
+
+A feature abre por admitir que o pedido é impossível: o mínimo da plataforma para trabalho periódico
+são 15 minutos e uma aeronave atravessa um raio de 30 km em 4 a 5. Quando o widget acorda, o avião já
+saiu. A saída foi dizer a verdade em vez de a esconder — o instante sempre à vista, e linguagem de
+presente só dentro de uma janela de 5 minutos, avaliada **no momento da leitura** e não na escrita
+(AD-024). Se fosse decidida na escrita, o widget afirmaria presença durante 25 dos 30 minutos em que
+isso já era falso.
+
+**Corrigiu a AD-003**, primeira vez que uma decisão do projeto é corrigida por outra. Verificado por
+`javap` sobre o AAR que `updateAppWidgetState` exige um `GlanceId`: o estado do Glance é por instância
+de widget. Guardar lá o resultado obrigava a N cópias e deixava as notificações sem o poderem ler.
+
+A revisão encontrou **dois bloqueadores**, ambos meus:
+
+1. **A cadência nunca era persistida.** `refreshIntervalMinutes` não aparecia uma vez no
+   `SettingsRepositoryImpl` — o cursor mexia-se e o valor era descartado em silêncio, com o trabalho a
+   correr sempre a 15 minutos e a gastar o dobro do orçamento. Escapou porque os testes do ecrã usam um
+   repositório falso que guarda o objeto inteiro em memória, onde a lacuna não existe. Lição:
+   **um duplo que guarda mais do que o real esconde exatamente o que é preciso testar.**
+2. **Um toque em atualizar sem rede prendia o widget em "A atualizar…" para sempre** — o mesmo defeito
+   que a 003 teve. Resolvido tirando a restrição de rede ao pedido manual, e não verificando a rede
+   antes de enfileirar: essa verificação só reduz a probabilidade, porque a rede pode cair entre a
+   verificação e a execução.
+
+**Falta a validação em dispositivo** (`specs/005-sky-widget/quickstart.md`), com prioridade para a
+secção 4 — o widget partido da v1.0.0 a recuperar sozinho, que só é reproduzível a partir dessa versão.
+
 ## Primeira release
 
 **v1.0.0**, com APK assinado. A chave vive em `~/.mysky/mysky-release.jks`, fora do repositório, e as

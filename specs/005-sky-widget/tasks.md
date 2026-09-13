@@ -108,7 +108,7 @@ abrir a app.
 - [X] T042 Correr `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` — tudo verde
 - [X] T043 Invocar o subagente `reviewer` sobre a feature completa e tratar os achados críticos e os "deveria corrigir" (princípio VI)
 - [ ] T044 Validação manual de [quickstart.md](./quickstart.md), com prioridade para a **secção 4** (o widget partido da v1.0.0, que só é reproduzível uma vez) e a **secção 7** (0 ou 1 trabalho, sempre)
-- [ ] T045 Atualizar a secção "Estado atual" do `CLAUDE.md`
+- [X] T045 Atualizar a secção "Estado atual" do `CLAUDE.md`
 
 ---
 
