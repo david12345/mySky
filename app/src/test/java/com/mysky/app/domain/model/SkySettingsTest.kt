@@ -132,6 +132,11 @@ class SkySettingsTest {
             detectionRadiusMeters = SkySettings.RADIUS_RANGE.endInclusive,
             minElevationDegrees = SkySettings.MIN_ELEVATION_RANGE.endInclusive,
             minAltitudeMeters = SkySettings.MIN_ALTITUDE_RANGE.endInclusive,
+            // Acrescentado na 006: com o ângulo mínimo no máximo (60°), o limiar de aviso de origem
+            // (30°) deixa de ser alcançável e é corrigido para cima. O objeto tem de ser coerente
+            // consigo próprio para poder ser comparado com a sua própria correção — foi este teste
+            // que apanhou a interação, e é bom sinal que a tenha apanhado.
+            notificationThresholdDegrees = SkySettings.MIN_ELEVATION_RANGE.endInclusive,
         )
 
         assertEquals(minimos, minimos.coerced())
@@ -182,5 +187,45 @@ class SkySettingsTest {
 
         assertTrue(mexido.withDefaults().notificationsEnabled)
         assertFalse(mexido.withDefaults().widgetEnabled)
+    }
+
+    // --- O limiar de aviso e o seu piso dependente (006) ----------------------------------------
+
+    @Test
+    fun `o limiar de aviso nunca fica abaixo do angulo minimo de detecao`() {
+        // Não é uma preferência: abaixo do mínimo de deteção a faixa é **inatingível**, porque essas
+        // aeronaves já foram descartadas antes de chegarem à seleção do candidato. Deixá-la escolher
+        // daria um cursor com metade do curso sem efeito nenhum.
+        val incoerente = SkySettings(minElevationDegrees = 40.0, notificationThresholdDegrees = 10.0)
+
+        assertEquals(40.0, incoerente.coerced().notificationThresholdDegrees, 0.001)
+    }
+
+    @Test
+    fun `um limiar acima do minimo e respeitado tal como esta`() {
+        val coerente = SkySettings(minElevationDegrees = 15.0, notificationThresholdDegrees = 55.0)
+
+        assertEquals(55.0, coerente.coerced().notificationThresholdDegrees, 0.001)
+    }
+
+    @Test
+    fun `o piso do aviso nunca mexe no intervalo do controlo de detecao`() {
+        // A dependência é de um só sentido. Se fosse simétrica, seria o problema que a AD-021
+        // rejeitou: um limite a mover-se debaixo do dedo do utilizador.
+        val comLimiarAlto = SkySettings(minElevationDegrees = 10.0, notificationThresholdDegrees = 80.0)
+
+        assertEquals(10.0, comLimiarAlto.coerced().minElevationDegrees, 0.001)
+    }
+
+    @Test
+    fun `as notificacoes estao desligadas de origem`() {
+        // FR-001, e é a constituição a exigi-lo. Um valor de origem que interrompa o utilizador sem
+        // ele ter pedido seria motivo para desinstalar.
+        assertFalse(SkySettings().notificationsEnabled)
+    }
+
+    @Test
+    fun `o limiar de aviso de origem sao trinta graus`() {
+        assertEquals(30.0, SkySettings().notificationThresholdDegrees, 0.0)
     }
 }

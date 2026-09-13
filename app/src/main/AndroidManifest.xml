@@ -46,10 +46,26 @@
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.MySky">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+                Entrada a partir de uma notificação de passagem (006). O esquema é próprio da app e
+                não é navegável de fora: `android:scheme="mysky"` sem host público significa que só o
+                `PendingIntent` que a própria app cria, com `setPackage`, o alcança.
+
+                `singleTask` para uma notificação tocada com a app já aberta reutilizar a instância em
+                vez de empilhar uma segunda cópia do ecrã por cima da que o utilizador já tinha.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="mysky" android:host="flight" />
             </intent-filter>
         </activity>
 

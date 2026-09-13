@@ -27,6 +27,26 @@
     <string name="widget_no_connection">Sem ligação</string>
     <string name="widget_rate_limited">Limite diário atingido</string>
 
+    <!-- Notificações de passagem (006) -->
+    <string name="notification_channel_name">Aviões por cima</string>
+    <string name="notification_channel_description">Aviso quando uma aeronave passa alto sobre a tua localização.</string>
+    <string name="notification_no_callsign">Aeronave sem indicativo</string>
+    <string name="notification_unknown_airline">companhia desconhecida</string>
+    <string name="notification_body">A %1$d° acima do horizonte · %2$s</string>
+
+    <!-- Definições: a secção das notificações -->
+    <string name="settings_section_notifications">Notificações</string>
+    <string name="settings_notifications_enabled">Avisar-me quando passa um avião</string>
+    <string name="settings_notifications_help">Só funciona com o trabalho de fundo ativo. Fica desligado até tu quereres.</string>
+    <string name="settings_notification_threshold">Avisar a partir de</string>
+    <string name="settings_notification_threshold_help">Quanto mais alto o ângulo, mais raro o aviso — e menos tempo tens para olhar.</string>
+    <!-- O número que o utilizador precisa de ver ANTES de ligar, senão conclui que está avariado. -->
+    <string name="settings_capture_rate">Com esta configuração, esperas ser avisado de cerca de %1$d%% das passagens.</string>
+    <string name="settings_capture_rate_why">O Android só deixa procurar de %1$d em %1$d minutos, e um avião atravessa o teu céu em menos de três. Não há forma de apanhar mais sem gastar a bateria toda.</string>
+    <string name="settings_notifications_permission_missing">As notificações estão bloqueadas nas definições do Android.</string>
+    <string name="settings_background_location_missing">Falta a permissão de localização em segundo plano. Sem ela, o widget e os avisos não funcionam com a app fechada.</string>
+    <string name="settings_open_system_settings">Abrir definições</string>
+
     <!-- Rationale das permissões: mostrado ANTES do diálogo do sistema. -->
     <string name="permission_location_rationale">Para saber que aviões estão sobre ti, a mySky precisa da tua localização. A posição é usada apenas no teu dispositivo, para calcular a distância e o ângulo até cada avião.</string>
     <string name="permission_background_location_rationale">Para te avisar quando passa um avião mesmo por cima, mesmo com a app fechada, a mySky precisa de aceder à localização em segundo plano. Podes usar a app sem isto — só não recebes notificações com a app fechada.</string>

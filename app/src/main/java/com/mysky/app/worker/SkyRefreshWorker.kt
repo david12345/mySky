@@ -4,9 +4,14 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.mysky.app.domain.repository.SightingRepository
 import com.mysky.app.domain.repository.SkyWidgetRepository
 import com.mysky.app.domain.time.TimeProvider
+import com.mysky.app.notification.OverheadNotifier
+import com.mysky.app.domain.usecase.DecideOverheadNotificationUseCase
 import com.mysky.app.domain.usecase.LocationAccessMode
+import com.mysky.app.domain.usecase.NotificationDecision
+import com.mysky.app.domain.usecase.SkyCycleResult
 import com.mysky.app.domain.usecase.RunSkyCycleUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -30,15 +35,18 @@ class SkyRefreshWorker @AssistedInject constructor(
     private val skyWidgetRepository: SkyWidgetRepository,
     private val widgetRefresher: WidgetRefresher,
     private val timeProvider: TimeProvider,
+    private val decideOverheadNotification: DecideOverheadNotificationUseCase,
+    private val overheadNotifier: OverheadNotifier,
+    private val sightingRepository: SightingRepository,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
         val isManual = inputData.getBoolean(KEY_MANUAL, false)
 
+        val cycle = runSkyCycle(accessMode = LocationAccessMode.BACKGROUND)
+
         val decision = SkyRefreshDecision.decide(
-            // Segundo plano: o worker corre sem ecrã visível, e desde a API 29 isso exige uma
-            // permissão própria (AD-029).
-            result = runSkyCycle(accessMode = LocationAccessMode.BACKGROUND),
+            result = cycle,
             nowEpochSeconds = timeProvider.nowEpochSeconds(),
             isManual = isManual,
         )
@@ -46,6 +54,27 @@ class SkyRefreshWorker @AssistedInject constructor(
         // `null` significa "não toques no que lá está" — é o que faz uma falha nunca apagar o que o
         // utilizador estava a ver (FR-014).
         decision.snapshot?.let { skyWidgetRepository.save(it) }
+
+        // O passo das notificações (AD-034). Continua a ser encadeamento: toda a decisão — se avisar,
+        // quem avisar, se já foi avisado — saiu para uma função pura e um caso de uso testável com
+        // duplos, porque sem `work-testing` nada que ficasse aqui dentro seria verificável.
+        //
+        // Dispara também num pedido manual: a deduplicação já impede repetição, e não há razão de
+        // produto para tratar os dois de forma diferente.
+        if (cycle is SkyCycleResult.Success) {
+            when (val notification = decideOverheadNotification(cycle.flights)) {
+                is NotificationDecision.Notify -> {
+                    overheadNotifier.notifyOverhead(notification.flight, cycle.observedAtEpochSeconds)
+                    sightingRepository.record(
+                        flight = notification.flight,
+                        observedAtEpochSeconds = cycle.observedAtEpochSeconds,
+                        notified = true,
+                    )
+                }
+
+                NotificationDecision.Skip -> Unit
+            }
+        }
 
         // Repinta **sempre**, mesmo quando falhou e mesmo quando não há nada novo. É o que limpa o
         // "a atualizar" e mostra a razão da falha. Repintar só quando havia snapshot novo deixaria o

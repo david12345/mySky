@@ -3,6 +3,7 @@ package com.mysky.app.data.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.IOException
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
@@ -80,6 +81,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 preferences[DISTANCE_UNIT] = updated.distanceUnit.name
                 preferences[ALTITUDE_UNIT] = updated.altitudeUnit.name
                 preferences[REFRESH_INTERVAL] = updated.refreshIntervalMinutes
+                preferences[NOTIFICATIONS_ENABLED] = updated.notificationsEnabled
+                preferences[NOTIFICATION_THRESHOLD] = updated.notificationThresholdDegrees
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
@@ -102,6 +105,8 @@ class SettingsRepositoryImpl @Inject constructor(
             distanceUnit = enumOrDefault(this[DISTANCE_UNIT], defaults.distanceUnit),
             altitudeUnit = enumOrDefault(this[ALTITUDE_UNIT], defaults.altitudeUnit),
             refreshIntervalMinutes = this[REFRESH_INTERVAL] ?: defaults.refreshIntervalMinutes,
+            notificationsEnabled = this[NOTIFICATIONS_ENABLED] ?: defaults.notificationsEnabled,
+            notificationThresholdDegrees = this[NOTIFICATION_THRESHOLD] ?: defaults.notificationThresholdDegrees,
         )
     }
 
@@ -134,5 +139,11 @@ class SettingsRepositoryImpl @Inject constructor(
          * objeto inteiro em memória, onde a lacuna não existe.
          */
         val REFRESH_INTERVAL = longPreferencesKey("refresh_interval_minutes")
+
+        // Escritas ao mesmo tempo que o resto, e não num segundo passo: a lição do defeito que a
+        // revisão da 005 apanhou é que um controlo sem persistência é decorativo, e que a falta não
+        // dá erro nenhum — o valor volta ao sítio sozinho e ninguém percebe porquê.
+        val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        val NOTIFICATION_THRESHOLD = doublePreferencesKey("notification_threshold_degrees")
     }
 }

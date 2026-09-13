@@ -18,24 +18,24 @@ tem valor por si: entregue sozinha, corrige o widget que hoje não funciona em A
 
 ## Fase 1: Fundações
 
-- [ ] T006 [P] `domain/model/NotificationPolicy.kt`: janelas, limiar de origem, e `expectedCaptureRate(limiar, cadência)` com o teto de 100%
-- [ ] T007 [P] Teste do `NotificationPolicy` com a tabela de [data-model.md](./data-model.md), incluindo a fronteira do teto
-- [ ] T008 [P] `domain/model/OverheadNotificationSelector.kt`: seleção pura, `maxByOrNull`, fronteira inclusiva
-- [ ] T009 [P] Teste do seletor: lista fora de ordem, lista vazia, exatamente no limiar, ninguém acima
-- [ ] T010 `SkySettings` ganha `notificationThresholdDegrees` e o piso dependente no `coerced()` (AD-033)
-- [ ] T011 [P] Teste do piso: o limiar nunca fica abaixo do ângulo mínimo de deteção, e mexer no limiar **não** altera o intervalo do outro controlo
-- [ ] T012 [P] `domain/repository/NotificationPermission.kt` e a implementação sobre `NotificationManagerCompat`
-- [ ] T013 `SightingRepository.record` ganha `notified: Boolean` **sem omissão**; implementar `SightingRepositoryImpl` com `wasNotifiedRecently`, `record` e retenção em linha
+- [X] T006 [P] `domain/model/NotificationPolicy.kt`: janelas, limiar de origem, e `expectedCaptureRate(limiar, cadência)` com o teto de 100%
+- [X] T007 [P] Teste do `NotificationPolicy` com a tabela de [data-model.md](./data-model.md), incluindo a fronteira do teto
+- [X] T008 [P] `domain/model/OverheadNotificationSelector.kt`: seleção pura, `maxByOrNull`, fronteira inclusiva
+- [X] T009 [P] Teste do seletor: lista fora de ordem, lista vazia, exatamente no limiar, ninguém acima
+- [X] T010 `SkySettings` ganha `notificationThresholdDegrees` e o piso dependente no `coerced()` (AD-033)
+- [X] T011 [P] Teste do piso: o limiar nunca fica abaixo do ângulo mínimo de deteção, e mexer no limiar **não** altera o intervalo do outro controlo
+- [X] T012 [P] `domain/repository/NotificationPermission.kt` e a implementação sobre `NotificationManagerCompat`
+- [X] T013 `SightingRepository.record` ganha `notified: Boolean` **sem omissão**; implementar `SightingRepositoryImpl` com `wasNotifiedRecently`, `record` e retenção em linha
 - [ ] T014 [P] Testes do `SightingRepositoryImpl` com base de dados em memória: a janela de deduplicação, a retenção, e uma aeronave nunca avisada
 
 ## Fase 2: US1 — Ser avisado (P1) 🎯 MVP
 
-- [ ] T015 `DecideOverheadNotificationUseCase` com a ordem de verificações do [contrato](./contracts/notification-decision.md) — o interruptor **primeiro**, para não consultar Room a cada ciclo de quem tem a feature desligada
-- [ ] T016 [P] Testes do caso de uso: cada uma das 7 invariantes, com duplos, mais **desligado de origem não avisa** (FR-001) e **um ciclo falhado nunca chega a decidir** (FR-009)
-- [ ] T017 Implementar `OverheadNotifier`: canal de notificação, conteúdo, e **nunca lançar**. O conteúdo **inclui o instante da observação** (FR-008): um aviso atrasado pelo Doze pode chegar horas depois, e "está por cima de ti" seria falso — a mesma honestidade temporal que a 005 impôs ao widget
-- [ ] T018 Deep link para o detalhe da aeronave (FR-007), sobre a rota `flight/{icao24}` que já existe
-- [ ] T019 `SkyRefreshWorker` ganha o passo de notificação depois de gravar e antes de repintar (AD-034); dispara no ciclo periódico **e** no manual
-- [ ] T020 [P] Strings das notificações, em português
+- [X] T015 `DecideOverheadNotificationUseCase` com a ordem de verificações do [contrato](./contracts/notification-decision.md) — o interruptor **primeiro**, para não consultar Room a cada ciclo de quem tem a feature desligada
+- [X] T016 [P] Testes do caso de uso: cada uma das 7 invariantes, com duplos, mais **desligado de origem não avisa** (FR-001) e **um ciclo falhado nunca chega a decidir** (FR-009)
+- [X] T017 Implementar `OverheadNotifier`: canal de notificação, conteúdo, e **nunca lançar**. O conteúdo **inclui o instante da observação** (FR-008): um aviso atrasado pelo Doze pode chegar horas depois, e "está por cima de ti" seria falso — a mesma honestidade temporal que a 005 impôs ao widget
+- [X] T018 Deep link para o detalhe da aeronave (FR-007), sobre a rota `flight/{icao24}` que já existe
+- [X] T019 `SkyRefreshWorker` ganha o passo de notificação depois de gravar e antes de repintar (AD-034); dispara no ciclo periódico **e** no manual
+- [X] T020 [P] Strings das notificações, em português
 
 ## Fase 3: US2 — Ligar com a expectativa certa (P2)
 

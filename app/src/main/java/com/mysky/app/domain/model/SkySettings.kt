@@ -20,6 +20,7 @@ data class SkySettings(
     val distanceUnit: DistanceUnit = DistanceUnit.KILOMETERS,
     val altitudeUnit: AltitudeUnit = AltitudeUnit.METERS,
     val notificationsEnabled: Boolean = false,
+    val notificationThresholdDegrees: Double = NotificationPolicy.DEFAULT_THRESHOLD_DEGREES,
     val widgetEnabled: Boolean = true,
 ) {
     fun toCriteria(): OverheadCriteria = OverheadCriteria(
@@ -43,6 +44,15 @@ data class SkySettings(
         minElevationDegrees = minElevationDegrees.coerceIn(MIN_ELEVATION_RANGE),
         minAltitudeMeters = minAltitudeMeters.coerceIn(MIN_ALTITUDE_RANGE),
         refreshIntervalMinutes = refreshIntervalMinutes.coerceIn(REFRESH_INTERVAL_RANGE),
+        // O piso **depende** do ângulo mínimo de deteção, e é a única dependência entre limites nesta
+        // classe. A AD-021 recusou acoplar limites, mas o caso era outro: lá a relação era sobre
+        // utilidade e era simétrica, com um cursor a mover-se debaixo do dedo. Aqui é estrutural e de
+        // um sentido só — um limiar de aviso abaixo do mínimo de deteção não é menos útil, é uma faixa
+        // **inatingível**, porque essas aeronaves já foram descartadas antes de chegarem à seleção. E
+        // o piso do aviso nunca desloca o intervalo do controlo de deteção; só o inverso.
+        notificationThresholdDegrees = notificationThresholdDegrees.coerceIn(
+            minElevationDegrees.coerceIn(MIN_ELEVATION_RANGE)..90.0,
+        ),
     )
 
     /** Repõe **só** os campos ajustáveis no ecrã de definições, deixando os outros como estão. */
