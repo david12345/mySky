@@ -145,6 +145,10 @@ negócio continua inteira em `DetectOverheadFlightsUseCase`.
 topologia da navegação e mistura os campos dos dois ecrãs; laços independentes com mutex ou cache
 com validade, que reintroduzem a coordenação explícita que a AD-008 evitou e duplicam o backoff de
 429 em dois sítios que podem divergir.
+**Corrigido pela AD-030:** a frase seguinte dizia que o `MainViewModel` é o único ecrã que pede
+permissão. Deixou de ser verdade na 006. O `MainViewModel` continua o único a pedir a localização de
+primeiro plano; o `SettingsViewModel` passa a pedir `POST_NOTIFICATIONS` e, por via das definições do
+sistema, a localização de segundo plano. O resto da consequência mantém-se.
 **Consequência:** `PermissionState` e o rationale ficam só no `MainViewModel` — é o único ecrã que
 pede permissão, e a `SkySession` nunca sabe o que é uma permissão; limita-se a consultar
 `hasLocationPermission()` a cada ciclo. Para que conceder a permissão não implique esperar pelo
@@ -436,6 +440,106 @@ demonstrada nesta app); alargar o `max(intervalo, retryAfter)` ao worker periód
 **Consequência:** o `SkySession.refreshOnce()` é alterado nesta feature para delegar — refactor
 previsto, não acidente de alcance. Os testes existentes continuam a valer porque o comportamento
 observável não muda.
+
+### AD-029 — A localização de segundo plano é uma causa própria, verificada dentro do caso de uso
+**Corrige um defeito da 005**, encontrado durante o planeamento da 006 e confirmado por duas
+verificações independentes: `ACCESS_BACKGROUND_LOCATION` está declarada no manifesto **desde o
+esqueleto inicial e nunca é pedida em lado nenhum**, e `hasLocationPermission()` só verifica as duas
+permissões normais. Desde a API 29, obter posição sem UI visível e sem foreground service exige
+aquela permissão, e um worker do WorkManager corre exatamente nessas condições.
+
+Sem correção, a sequência era: o worker pergunta se tem permissão e ouve que sim, pede a posição e
+recebe `null`, isso vira `LocationUnavailable`, e a tabela de decisão mapeia para `retry` — **acorda,
+falha, reintenta, para sempre**, com o widget preso em "ainda sem dados" e bateria gasta em tentativas
+que nunca podem ter sucesso. Não dá erro nenhum. É a categoria do princípio VI.
+
+`LocationRepository` ganha `hasBackgroundLocationPermission()` (verdadeiro por construção abaixo da API
+29). O `RunSkyCycleUseCase` ganha `accessMode: LocationAccessMode = FOREGROUND` e, em `BACKGROUND`,
+verifica-a também, devolvendo `SkyCycleResult.BackgroundLocationUnavailable`. A `SkySession` não passa
+o parâmetro e não muda de comportamento; o worker passa `BACKGROUND`.
+**Porquê dentro do caso de uso e não como pré-filtro no worker:** só assim continua a haver **um único
+sítio a decidir se se pode pedir posição**, que é a garantia que a AD-028 dá para o resto da sequência.
+Um parâmetro, e não deteção automática do estado do processo, porque essa deteção exigiria Android real
+para testar — a restrição que empurrou a AD-028 para funções puras.
+**Rejeitadas:** verificar no worker (duplica a decisão); detetar o contexto por API de processo (não
+testável na JVM); deixar cair em `LocationUnavailable` (perde a causa, e os remédios são diferentes —
+um é esperar, o outro é ir às definições do sistema).
+**Consequência:** o `SkyRefreshDecision` trata este caso **exatamente como `NoPermission`** — grava o
+snapshot explicativo e devolve `success()`, o que mata o `retry` infinito. O `SkyWidgetSnapshot` **não**
+ganha uma segunda variante: do lado do widget o remédio é o mesmo, abrir a app. A distinção entre as
+duas faltas só é precisa no ecrã de definições, lida ao vivo e nunca persistida.
+
+### AD-030 — O pedido da localização de segundo plano vive nas definições, e passa pelo sistema
+O fluxo fica em `presentation/permission/`, ao lado do de localização, invocado só pelo
+`SettingsViewModel` quando o utilizador liga as notificações. Na API 30+ o diálogo do sistema já não
+oferece "Permitir sempre", por isso o pedido segue o padrão que já existe para a recusa permanente:
+explica o porquê e leva às definições da app.
+**Porquê:** é a única via que a plataforma oferece a partir dessa versão, e a constituição não permite
+pedir esta permissão mais cedo nem noutro sítio.
+**Consequência:** corrige a AD-011 (ver lá). Recusar qualquer destas permissões tem de deixar a app
+plenamente utilizável — sem trabalho de fundo, nunca um ecrã preso.
+
+### AD-031 — Seleção pura, deduplicação impura, num caso de uso que as junta
+`domain/model/OverheadNotificationSelector.selectCandidate(flights, thresholdDegrees)` é puro e faz só
+a FR-003: o de maior elevação acima do limiar, ou nenhum. `DecideOverheadNotificationUseCase` orquestra
+— lê as definições, chama o seletor, consulta `wasNotifiedRecently` — e devolve `Notify(flight)` ou
+`Skip`.
+**Porquê:** é a mesma divisão que já separa o `DetectOverheadFlightsUseCase` (puro) do
+`ObserveSkyUseCase` (orquestrador com I/O). A deduplicação exige persistência e não pode contaminar a
+parte pura; a parte pura é onde vive a regra que precisa de testes de tabela.
+**Room fica**, ao contrário das AD-007 e AD-013: aqui **é mesmo** uma consulta por chave com janela
+temporal e retenção, que é o caso de uso para que Room existe. Só se gravam aeronaves **avisadas** —
+gravar todas as observadas seria implementar o histórico por acidente e encher a tabela com milhares de
+linhas por dia. `SightingRepository.record` ganha `notified: Boolean` **sem valor por omissão**, para
+forçar cada chamador a dizer o que quer em vez de herdar um significado em silêncio. A retenção corre
+em linha a seguir à escrita, sem worker próprio: um trabalho tão barato não merece ponto de agendamento
+(a razão de ser da AD-016 lida ao contrário).
+**Consequência:** as janelas de deduplicação e de retenção não são configuráveis; vivem em
+`domain/model/NotificationPolicy`, ao lado de `expectedCaptureRate(limiar, cadência)`, que resolve a
+FR-010 no mesmo papel que o `SkyBudget` tem para a cadência — um ponto de verdade, não um número
+reescrito no ecrã.
+
+### AD-032 — "Posso notificar?" é leitura do sistema, feita em dois sítios, nunca persistida
+Porto `domain/repository/NotificationPermission` com `isGranted()`, sobre
+`NotificationManagerCompat.areNotificationsEnabled()` — que cobre de uma vez a permissão de runtime da
+API 33+ **e** o interruptor clássico que existe em todas as versões.
+`SkySettings.notificationsEnabled` continua a ser só a **intenção guardada**, nunca corrigida a partir
+do sistema. O estado efetivo é derivado: intenção **e** permissão, recalculado quando o ecrã volta a
+ficar visível.
+**Porquê:** reescrever a intenção quando o sistema revoga a permissão **perderia** essa intenção — se o
+utilizador voltar a conceder, teria de tocar outra vez no interruptor sem razão. São dois dados de
+naturezas diferentes e não podem partilhar a mesma gravação.
+**Rejeitadas:** guardar o resultado da verificação nas definições (dado derivado ao lado de dado de
+intenção, o problema que a AD-017 evitou); usar só `checkSelfPermission(POST_NOTIFICATIONS)` (não cobre
+o interruptor anterior à API 33 nem um canal desativado).
+
+### AD-033 — O limiar de aviso tem um piso dependente; a AD-021 não se aplica
+`SkySettings` ganha `notificationThresholdDegrees`, e o `coerced()` ganha uma dependência **de um só
+sentido**: o limiar de aviso nunca fica abaixo do ângulo mínimo de deteção.
+**Porquê a AD-021 não se aplica:** ela recusou acoplar limites porque a relação raio×ângulo é sobre
+**utilidade** — uma escolha rara mas legítima não devia ser bloqueada — e porque o acoplamento era
+**simétrico**, com um limite a mover-se debaixo do dedo. Aqui a relação é **estrutural e de um sentido
+só**: um limiar de aviso abaixo do mínimo de deteção não é menos útil, é uma faixa **inatingível**,
+porque essas aeronaves já foram descartadas antes de chegarem à seleção. E o piso do aviso nunca
+desloca o intervalo do controlo de deteção — só o inverso.
+**Rejeitadas:** aviso textual sem corrigir (deixaria uma faixa do controlo estruturalmente morta, sem
+efeito nenhum — "resultado errado com ar de certo"); um piso estático (teria de ser reescrito à mão
+sempre que o mínimo de deteção mudasse, que é o defeito que a revisão da 004 apanhou).
+
+### AD-034 — O worker ganha um passo e continua a ser encadeamento
+Depois de gravar o snapshot e antes de repintar, o `SkyRefreshWorker` chama o
+`DecideOverheadNotificationUseCase` quando o ciclo teve sucesso, e num `Notify` chama o notificador e
+regista o aviso. O `SkyRefreshDecision` **não muda de forma** — continua só sobre snapshot e desfecho —
+e ganha apenas o mapeamento do caso novo da AD-029.
+Dispara **tanto no ciclo periódico como no manual**: a deduplicação já impede repetição e não há razão
+de produto para os distinguir. **Nunca dispara a partir da `SkySession`** — notificar sobre o que o
+ecrã já está a mostrar seria ruído, e poria dois chamadores a escrever no mesmo estado de deduplicação.
+**Porquê:** mantém a garantia que a AD-028 documentou — o que fica no `doWork()` é encadeamento, porque
+toda a decisão saiu para uma função pura e um caso de uso testável com duplos. Sem isso, o `doWork()`
+acumularia condicionais que a ausência de `work-testing` torna não verificáveis.
+**Consequência:** o notificador **nunca lança** — uma falha a publicar é engolida, no espírito de melhor
+esforço da AD-004 — e o registo do aviso acontece a seguir, aceitando a corrida rara e não observável
+entre a permissão verificada e a publicação real.
 
 ## Estrutura de pastas
 
