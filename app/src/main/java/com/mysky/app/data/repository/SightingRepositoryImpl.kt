@@ -1,10 +1,13 @@
 package com.mysky.app.data.repository
 
+import android.util.Log
+
 import com.mysky.app.data.local.SightingDao
 import com.mysky.app.data.local.entity.SightingEntity
 import com.mysky.app.domain.model.NotificationPolicy
 import com.mysky.app.domain.model.OverheadFlight
 import com.mysky.app.domain.repository.SightingRepository
+import com.mysky.app.domain.time.TimeProvider
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -24,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 @Singleton
 class SightingRepositoryImpl @Inject constructor(
     private val sightingDao: SightingDao,
+    private val timeProvider: TimeProvider,
 ) : SightingRepository {
 
     override fun recentSightings(limit: Int): Flow<List<OverheadFlight>> {
@@ -49,6 +53,7 @@ class SightingRepositoryImpl @Inject constructor(
             throw cancellation
         } catch (throwable: Throwable) {
             // Ver a KDoc: perder o registo é menos mau do que perder o worker.
+            Log.w(TAG, "não foi possível gravar o avistamento", throwable)
         }
     }
 
@@ -61,12 +66,24 @@ class SightingRepositoryImpl @Inject constructor(
      * funcionalidade de vez.
      */
     override suspend fun wasNotifiedRecently(icao24: String, withinSeconds: Long): Boolean = try {
-        val since = System.currentTimeMillis() / 1000 - withinSeconds
+        // Pelo `TimeProvider` e não por `System.currentTimeMillis()`: é a convenção do projeto
+        // (AD-009), mas aqui há uma razão a mais — a escrita já usa o instante que vem do
+        // `TimeProvider`, e ter duas fontes de tempo na mesma tabela é como se produz uma
+        // deduplicação que falha sem ninguém perceber porquê. E sem isto não há forma de fixar o
+        // relógio num teste.
+        val since = timeProvider.nowEpochSeconds() - withinSeconds
         sightingDao.countNotifiedSince(icao24, since) > 0
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (throwable: Throwable) {
+        // Deixa rasto: devolver `true` para sempre por causa de um esquema partido silenciaria a
+        // feature inteira sem sintoma nenhum, que é o pior desfecho possível de uma escolha segura.
+        Log.w(TAG, "não foi possível verificar a deduplicação; a assumir que já foi avisada", throwable)
         true
+    }
+
+    private companion object {
+        const val TAG = "SightingRepository"
     }
 
     private fun OverheadFlight.toEntity(observedAtEpochSeconds: Long, notified: Boolean) = SightingEntity(

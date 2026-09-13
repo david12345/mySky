@@ -54,9 +54,16 @@
             </intent-filter>
 
             <!--
-                Entrada a partir de uma notificação de passagem (006). O esquema é próprio da app e
-                não é navegável de fora: `android:scheme="mysky"` sem host público significa que só o
-                `PendingIntent` que a própria app cria, com `setPackage`, o alcança.
+                Entrada a partir de uma notificação de passagem (006).
+
+                **Sem `BROWSABLE`**, de propósito. Estava lá por hábito, e o comentário anterior
+                afirmava que o esquema não era alcançável de fora — o que era falso precisamente por
+                causa dela: com `BROWSABLE`, qualquer browser ou WebView podia abrir
+                `mysky://flight/<o-que-quisesse>`. O impacto era pequeno (abre o detalhe de um
+                indicativo arbitrário, que já é tratado com segurança), mas um comentário que promete
+                uma garantia que o código não cumpre é pior do que não ter comentário nenhum.
+
+                Sem ela, só o `PendingIntent` que a app cria — com `setPackage` — chega aqui.
 
                 `singleTask` para uma notificação tocada com a app já aberta reutilizar a instância em
                 vez de empilhar uma segunda cópia do ecrã por cima da que o utilizador já tinha.
@@ -64,7 +71,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="mysky" android:host="flight" />
             </intent-filter>
         </activity>

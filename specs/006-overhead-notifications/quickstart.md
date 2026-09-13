@@ -43,7 +43,8 @@ Para não esperar: baixa o limiar para o mínimo e força um ciclo com um avião
 | Verificar | Esperado |
 |---|---|
 | Conteúdo | indicativo, companhia quando conhecida, elevação |
-| Toque | abre o detalhe **daquela** aeronave, não a lista |
+| Toque, **app fechada à força** | abre o detalhe daquela aeronave |
+| Toque, **app em segundo plano e viva** | abre o detalhe daquela aeronave — este é o caso comum, porque o aviso nasce de um ciclo que a app acabou de correr, e é o que a revisão apanhou partido |
 | Cinco aeronaves acima do limiar | **um** aviso, não cinco |
 | Dois ciclos seguidos com a mesma aeronave | **um** aviso |
 | Ciclo falhado | nenhum aviso, e nenhum aviso de erro |
@@ -53,7 +54,9 @@ Para não esperar: baixa o limiar para o mínimo e força um ciclo com um avião
 Com notificações ligadas, vai às definições do Android e desliga as notificações da app. Volta ao ecrã
 de definições.
 
-**Esperado:** o estado reflete a realidade — não pode continuar a mostrar-se ligado (FR-014). E a
+**Esperado:** o **próprio interruptor** aparece desligado, e não só o aviso por baixo dele (FR-014).
+Olhar para o interruptor é o passo, e é onde a revisão encontrou o defeito: o estado derivado estava
+certo e o Compose estava ligado ao campo errado. E a
 intenção guardada não se perde: voltar a conceder no sistema deve repor o funcionamento **sem** ter de
 tocar outra vez no interruptor.
 

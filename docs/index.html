@@ -121,6 +121,11 @@
 
   footer { padding: 40px 0 64px; color: var(--ink-soft); font-size: .87rem; }
   footer a { color: var(--ink-soft); }
+
+    table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: .95rem; }
+    th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid var(--line, rgba(128,128,128,.25)); }
+    th { font-weight: 600; opacity: .8; }
+    td em { opacity: .7; font-style: normal; }
 </style>
 </head>
 <body>
@@ -129,11 +134,11 @@
   <div class="wrap">
     <div class="brand">
       <h1>mySky</h1>
-      <span class="version">v1.0.0</span>
+      <span class="version">v1.1.0</span>
     </div>
     <p class="tagline">Os aviões que estão a passar por cima de ti. Agora.</p>
     <div class="cta">
-      <a class="btn btn-primary" href="https://github.com/david12345/mySky/releases/download/v1.0.0/mySky-1.0.0.apk">Descarregar o APK</a>
+      <a class="btn btn-primary" href="https://github.com/david12345/mySky/releases/download/v1.1.0/mySky-1.1.0.apk">Descarregar o APK</a>
       <a class="btn btn-ghost" href="https://github.com/david12345/mySky">Ver o código</a>
       <small>Android 8.0 ou superior · 10 MB</small>
     </div>
@@ -169,6 +174,16 @@
         <span class="icon">⚙️</span>
         <h3>O teu céu é teu</h3>
         <p>Ajusta o raio, o ângulo mínimo e a altitude mínima. Quem vive ao lado de um aeroporto não quer o mesmo que quem vive no interior.</p>
+      </div>
+      <div class="card">
+        <span class="icon">📱</span>
+        <h3>Um widget no ecrã inicial</h3>
+        <p>O avião mais alto do teu céu, sem abrires a app — e <strong>sempre com a hora a que foi visto</strong>. Nunca diz que um avião está lá em cima quando os dados já são velhos.</p>
+      </div>
+      <div class="card">
+        <span class="icon">🔔</span>
+        <h3>Aviso quando passa por cima</h3>
+        <p>Opcional e desligado de origem. Avisa de uma parte das passagens, não de todas — e a app diz-te de quantas, antes de ligares. Ver abaixo porquê.</p>
       </div>
       <div class="card">
         <span class="icon">🔒</span>
@@ -224,10 +239,38 @@
 
 <section>
   <div class="wrap">
+    <h2>Porque é que os avisos não apanham tudo</h2>
+    <p>
+      O Android só deixa uma app procurar em segundo plano de 15 em 15 minutos, no melhor caso, e pode
+      adiar mais. Um avião atravessa o teu céu em menos de três minutos. As contas não batem, e nenhum
+      desenho as faz bater: para apanhar todas as passagens seria preciso um serviço permanente com o
+      GPS ligado, que descarregaria a bateria num dia.
+    </p>
+    <table>
+      <thead><tr><th>Avisar a partir de</th><th>Tempo que o avião lá está</th><th>Passagens apanhadas</th></tr></thead>
+      <tbody>
+        <tr><td>30°&nbsp;<em>(por omissão)</em></td><td>2m 46s</td><td>~9% a 18%</td></tr>
+        <tr><td>45°</td><td>1m 36s</td><td>~5% a 11%</td></tr>
+        <tr><td>60°</td><td>55s</td><td>~3% a 6%</td></tr>
+      </tbody>
+    </table>
+    <p>
+      A app mostra-te este número no ecrã de definições, antes de ligares a opção. Preferimos dizer-to
+      do que deixar-te concluir, ao fim de duas semanas de silêncio, que está avariada.
+    </p>
+    <p>
+      <strong>O que a app nunca faz é mentir sobre isso.</strong> Quando o aviso chega, o avião está
+      mesmo lá — o problema é só ela calar-se muitas vezes, nunca falar quando não devia.
+    </p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
     <h2>Como instalar</h2>
     <p class="lede">Não está na Play Store. É um APK que instalas à mão.</p>
     <ol class="steps">
-      <li>Descarrega o <a href="https://github.com/david12345/mySky/releases/download/v1.0.0/mySky-1.0.0.apk">APK da v1.0.0</a> no telefone.</li>
+      <li>Descarrega o <a href="https://github.com/david12345/mySky/releases/download/v1.1.0/mySky-1.1.0.apk">APK da v1.1.0</a> no telefone.</li>
       <li>Abre o ficheiro. O Android vai pedir para permitir a instalação de fontes desconhecidas — é normal para apps fora da loja.</li>
       <li>Ao abrir, a app explica para que precisa da localização <em>antes</em> de a pedir. Chega a aproximada.</li>
     </ol>

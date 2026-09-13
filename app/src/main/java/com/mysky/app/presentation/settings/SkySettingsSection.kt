@@ -294,7 +294,14 @@ fun NotificationsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(checked = state.settings.notificationsEnabled, onCheckedChange = onEnabledChanged)
+            // `notificationsActive` e **não** `settings.notificationsEnabled`: o interruptor mostra o
+            // que a app consegue fazer, não o que o utilizador quis. Ligado à intenção, ele continuava
+            // visualmente ligado depois de o utilizador revogar a permissão no Android — a mentir
+            // sobre o estado, que é precisamente o que a FR-014 proíbe.
+            //
+            // A intenção guardada não se perde por isto (AD-032): voltar a conceder no sistema repõe o
+            // funcionamento sem ser preciso tocar aqui outra vez.
+            Switch(checked = state.notificationsActive, onCheckedChange = onEnabledChanged)
         }
 
         // A expectativa, sempre visível — ligada ou desligada a opção.
@@ -321,7 +328,10 @@ fun NotificationsSection(
             PermissionWarning(R.string.settings_notifications_permission_missing, onOpenSystemSettings)
         }
         if (state.settings.notificationsEnabled && !state.hasBackgroundLocationPermission) {
-            PermissionWarning(R.string.settings_background_location_missing, onOpenSystemSettings)
+            // Usa o rationale que já existia e nunca era lido: explicar **porquê** antes de mandar o
+            // utilizador às definições do sistema é o que a constituição exige, e mandá-lo lá sem
+            // razão nenhuma seria pior do que não pedir de todo.
+            PermissionWarning(R.string.permission_background_location_rationale, onOpenSystemSettings)
         }
 
         if (state.settings.notificationsEnabled) {

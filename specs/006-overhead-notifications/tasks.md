@@ -26,7 +26,7 @@ tem valor por si: entregue sozinha, corrige o widget que hoje não funciona em A
 - [X] T011 [P] Teste do piso: o limiar nunca fica abaixo do ângulo mínimo de deteção, e mexer no limiar **não** altera o intervalo do outro controlo
 - [X] T012 [P] `domain/repository/NotificationPermission.kt` e a implementação sobre `NotificationManagerCompat`
 - [X] T013 `SightingRepository.record` ganha `notified: Boolean` **sem omissão**; implementar `SightingRepositoryImpl` com `wasNotifiedRecently`, `record` e retenção em linha
-- [ ] T014 [P] Testes do `SightingRepositoryImpl` com base de dados em memória: a janela de deduplicação, a retenção, e uma aeronave nunca avisada
+- [X] T014 [P] Testes do `SightingRepositoryImpl` com base de dados em memória: a janela de deduplicação, a retenção, e uma aeronave nunca avisada
 
 ## Fase 2: US1 — Ser avisado (P1) 🎯 MVP
 
@@ -56,7 +56,7 @@ tem valor por si: entregue sozinha, corrige o widget que hoje não funciona em A
 ## Fase 5: Fecho
 
 - [X] T029 `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
-- [ ] T030 Invocar o `reviewer` e tratar os achados
+- [X] T030 Invocar o `reviewer` e tratar os achados
 - [ ] T031 Validação manual de [quickstart.md](./quickstart.md) — **secção 3 é a que prova a correção da 005**
 - [ ] T032 Atualizar o `CLAUDE.md`
 

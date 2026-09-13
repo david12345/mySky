@@ -476,6 +476,12 @@ oferece "Permitir sempre", por isso o pedido segue o padrão que já existe para
 explica o porquê e leva às definições da app.
 **Porquê:** é a única via que a plataforma oferece a partir dessa versão, e a constituição não permite
 pedir esta permissão mais cedo nem noutro sítio.
+**Corrigido na implementação:** esta AD dizia "fluxo de pedido ... ao lado do de localização", o que
+sugeria um diálogo próprio. Não há nenhum: **todas** as versões vão pelas definições do sistema. Na API
+29 o Android ainda ofereceria um diálogo com "Permitir sempre", e não o usamos — um caminho a mais, para
+uma fração pequena de aparelhos, com o outro a funcionar em todos. O que a implementação faz é mostrar
+o rationale (`permission_background_location_rationale`, que estava escrito e nunca era lido) **antes**
+do botão que leva às definições, que é o que o princípio III exige.
 **Consequência:** corrige a AD-011 (ver lá). Recusar qualquer destas permissões tem de deixar a app
 plenamente utilizável — sem trabalho de fundo, nunca um ecrã preso.
 

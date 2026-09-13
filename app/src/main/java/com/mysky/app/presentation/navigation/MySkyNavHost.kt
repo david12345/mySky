@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.compose.rememberNavController
@@ -26,7 +27,14 @@ object MySkyRoutes {
 }
 
 @Composable
-fun MySkyNavHost(navController: NavHostController = rememberNavController()) {
+fun MySkyNavHost(
+    navController: NavHostController = rememberNavController(),
+    onControllerReady: (NavHostController) -> Unit = {},
+) {
+    // A Activity precisa da referência para entregar deep links que cheguem depois do arranque —
+    // ver `MainActivity.onNewIntent`.
+    LaunchedEffect(navController) { onControllerReady(navController) }
+
     NavHost(navController = navController, startDestination = MySkyRoutes.SKY) {
         composable(MySkyRoutes.SKY) {
             MainScreen(
