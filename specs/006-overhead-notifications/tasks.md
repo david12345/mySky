@@ -10,11 +10,11 @@ description: "Task list for 006-overhead-notifications"
 Sem posição de segundo plano não há ciclo de fundo, e sem ciclo não há candidato a avisar. Esta fase
 tem valor por si: entregue sozinha, corrige o widget que hoje não funciona em Android 10+.
 
-- [ ] T001 Acrescentar `hasBackgroundLocationPermission()` a `LocationRepository` e implementá-lo em `LocationRepositoryImpl` — verdadeiro por construção abaixo da API 29, onde a permissão não existe
-- [ ] T002 Acrescentar `LocationAccessMode` (`FOREGROUND`/`BACKGROUND`) e o caso `BackgroundLocationUnavailable` ao `RunSkyCycleUseCase`, com o parâmetro a omitir por omissão para a `SkySession` não mudar de comportamento (AD-029)
-- [ ] T003 `SkyRefreshWorker` passa `BACKGROUND`; `SkyRefreshDecision` mapeia o caso novo **como `NoPermission`** — grava snapshot e devolve `success()`, o que mata o `retry` infinito
-- [ ] T004 [P] Testes: sem permissão de fundo o ciclo não vai à rede; o desfecho é `Success` e **nunca** `Retry`; a `SkySession` continua a não ser afetada
-- [ ] T005 Verificar que o teste de T004 **falha** contra o código anterior — senão não guarda nada
+- [X] T001 Acrescentar `hasBackgroundLocationPermission()` a `LocationRepository` e implementá-lo em `LocationRepositoryImpl` — verdadeiro por construção abaixo da API 29, onde a permissão não existe
+- [X] T002 Acrescentar `LocationAccessMode` (`FOREGROUND`/`BACKGROUND`) e o caso `BackgroundLocationUnavailable` ao `RunSkyCycleUseCase`, com o parâmetro a omitir por omissão para a `SkySession` não mudar de comportamento (AD-029)
+- [X] T003 `SkyRefreshWorker` passa `BACKGROUND`; `SkyRefreshDecision` mapeia o caso novo **como `NoPermission`** — grava snapshot e devolve `success()`, o que mata o `retry` infinito
+- [X] T004 [P] Testes: sem permissão de fundo o ciclo não vai à rede; o desfecho é `Success` e **nunca** `Retry`; a `SkySession` continua a não ser afetada
+- [X] T005 Verificar que o teste de T004 **falha** contra o código anterior — senão não guarda nada
 
 ## Fase 1: Fundações
 

@@ -35,7 +35,15 @@ object SkyRefreshDecision {
 
         // Repetir não resolve nada: a permissão não aparece por insistência, e cada tentativa
         // custaria bateria para chegar à mesma conclusão.
-        SkyCycleResult.NoPermission -> Decision(
+        //
+        // A falta da permissão de **segundo plano** cai aqui de propósito, e é uma correção a um
+        // defeito real: antes caía em `LocationUnavailable` → `Retry`, e como a permissão nunca
+        // aparecia sozinha, o worker acordava, falhava e reintentava indefinidamente, com o widget
+        // preso em "ainda sem dados". Do lado do widget o remédio é o mesmo — abrir a app — por isso
+        // partilham o snapshot; a distinção entre as duas faltas só é precisa no ecrã de definições.
+        SkyCycleResult.NoPermission,
+        SkyCycleResult.BackgroundLocationUnavailable,
+        -> Decision(
             snapshot = SkyWidgetSnapshot.PermissionMissing(nowEpochSeconds),
             outcome = WorkOutcome.Success,
         )

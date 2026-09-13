@@ -54,6 +54,7 @@ class SettingsViewModelTest {
 
     init {
         every { locationRepository.hasLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
         coEvery { locationRepository.getCurrentLocation() } returns LISBON
         coEvery { observeSky(LISBON, any()) } coAnswers {
             requests.incrementAndGet()

@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.mysky.app.domain.repository.SkyWidgetRepository
 import com.mysky.app.domain.time.TimeProvider
+import com.mysky.app.domain.usecase.LocationAccessMode
 import com.mysky.app.domain.usecase.RunSkyCycleUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -35,7 +36,9 @@ class SkyRefreshWorker @AssistedInject constructor(
         val isManual = inputData.getBoolean(KEY_MANUAL, false)
 
         val decision = SkyRefreshDecision.decide(
-            result = runSkyCycle(),
+            // Segundo plano: o worker corre sem ecrã visível, e desde a API 29 isso exige uma
+            // permissão própria (AD-029).
+            result = runSkyCycle(accessMode = LocationAccessMode.BACKGROUND),
             nowEpochSeconds = timeProvider.nowEpochSeconds(),
             isManual = isManual,
         )

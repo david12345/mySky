@@ -174,7 +174,13 @@ class SkySession @Inject constructor(
             // A sessão já verificou a permissão acima, por isso este ramo só é alcançável se ela for
             // revogada a meio do ciclo. Tratado como o caso acima e não como erro: não há nada a
             // mostrar ao utilizador que ele não veja já no ecrã de permissão.
-            SkyCycleResult.NoPermission -> {
+            // A sessão corre sempre em primeiro plano e nunca pede o modo de segundo plano, por isso
+            // este caso é inalcançável daqui. Tratado explicitamente e não com um `else`: se um dia
+            // alguém puser a sessão a correr noutro contexto, é para o compilador voltar a apontar
+            // para aqui, e não para o ramo silencioso engolir a diferença.
+            SkyCycleResult.BackgroundLocationUnavailable,
+            SkyCycleResult.NoPermission,
+            -> {
                 skippedForPermission = true
                 mutableState.update { it.copy(phase = LoadPhase.Idle) }
                 null

@@ -3,6 +3,7 @@ package com.mysky.app.data.repository
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.location.Location
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -40,6 +41,20 @@ class LocationRepositoryImpl @Inject constructor(
         LOCATION_PERMISSIONS.any { permission ->
             ContextCompat.checkSelfPermission(context, permission) ==
                 PackageManager.PERMISSION_GRANTED
+        }
+
+    /**
+     * Abaixo da API 29 devolve `true` sem verificar nada: a permissão não existe nessa versão, e
+     * `checkSelfPermission` sobre uma permissão inexistente devolveria negado, o que faria a app
+     * recusar-se a trabalhar em segundo plano precisamente nos aparelhos onde nada a impede.
+     */
+    override fun hasBackgroundLocationPermission(): Boolean =
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            true
+        } else {
+            ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
         }
 
     /**

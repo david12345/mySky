@@ -39,11 +39,24 @@ class RunSkyCycleUseCase @Inject constructor(
      * exatamente o tipo de perda que um refactor não pode causar. O trabalho de fundo ignora-o: não
      * tem ecrã nenhum onde a mostrar.
      */
-    suspend operator fun invoke(onProgress: (SkyCyclePhase) -> Unit = {}): SkyCycleResult {
+    suspend operator fun invoke(
+        accessMode: LocationAccessMode = LocationAccessMode.FOREGROUND,
+        onProgress: (SkyCyclePhase) -> Unit = {},
+    ): SkyCycleResult {
         try {
             // Sem permissão não se vai à rede, e é isso que impede o ciclo de gastar uma consulta do
             // orçamento diário para obter um erro previsível.
             if (!locationRepository.hasLocationPermission()) return SkyCycleResult.NoPermission
+
+            // Uma segunda pergunta, e não a mesma: ter permissão de localização não implica poder
+            // usá-la sem ecrã visível. Verificada aqui, dentro do caso de uso partilhado, para
+            // continuar a haver **um único sítio** a decidir se se pode pedir posição — um
+            // pré-filtro no worker duplicaria essa decisão em dois sítios obrigados a concordar.
+            if (accessMode == LocationAccessMode.BACKGROUND &&
+                !locationRepository.hasBackgroundLocationPermission()
+            ) {
+                return SkyCycleResult.BackgroundLocationUnavailable
+            }
 
             onProgress(SkyCyclePhase.LocatingUser)
 
@@ -80,6 +93,16 @@ class RunSkyCycleUseCase @Inject constructor(
     }
 }
 
+/**
+ * Em que contexto o ciclo corre.
+ *
+ * Entra por parâmetro e não por deteção automática do estado do processo: essa deteção exigiria
+ * Android real para ser testada, que é a restrição que já empurrou a tabela de decisão do worker para
+ * uma função pura. É fixo por tipo de chamador — os ecrãs são sempre primeiro plano, o worker é sempre
+ * segundo — por isso não é o género de valor que precisa de ser lido a cada ciclo.
+ */
+enum class LocationAccessMode { FOREGROUND, BACKGROUND }
+
 /** Onde o ciclo vai. Só interessa a quem tem um ecrã para o mostrar. */
 enum class SkyCyclePhase { LocatingUser, LoadingFlights }
 
@@ -93,6 +116,14 @@ sealed interface SkyCycleResult {
 
     /** Terminou sem olhar para o céu. Não é falha — repetir não resolveria nada. */
     data object NoPermission : SkyCycleResult
+
+    /**
+     * Tem permissão de localização, mas não a de segundo plano, e o ciclo corre em segundo plano.
+     *
+     * Distinta de [NoPermission] porque o remédio é outro: aquela pede-se com um diálogo, esta obriga
+     * a ir às definições do sistema. Colapsá-las faria a app pedir uma permissão que já tem.
+     */
+    data object BackgroundLocationUnavailable : SkyCycleResult
 
     data class Failure(val error: SkyError) : SkyCycleResult
 }

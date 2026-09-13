@@ -36,6 +36,7 @@ class RunSkyCycleUseCaseTest {
 
     private fun comPermissao(settings: SkySettings = SkySettings()) {
         every { locationRepository.hasLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns true
         coEvery { locationRepository.getCurrentLocation() } returns LISBON
         every { settingsRepository.settings } returns flowOf(settings)
         every { timeProvider.nowEpochSeconds() } returns 1_700_000_000L
@@ -106,5 +107,48 @@ class RunSkyCycleUseCaseTest {
         useCase()
 
         coVerify(exactly = 1) { observeSky(LISBON, settings.toCriteria()) }
+    }
+
+    // --- Localização de segundo plano (AD-029) --------------------------------------------------
+
+    @Test
+    fun `em segundo plano sem a permissao propria nao vai a rede`() {
+        // O defeito que a 005 tinha e que os 345 testes não apanharam: desde a API 29 o Android
+        // bloqueia a localização sem ecrã visível, e o worker corre exatamente nessas condições.
+        // Sem esta verificação, pedia-se a posição, vinha `null`, e isso virava um erro transitório
+        // que o worker reintentava para sempre.
+        runTest {
+            every { locationRepository.hasLocationPermission() } returns true
+            every { locationRepository.hasBackgroundLocationPermission() } returns false
+
+            val resultado = useCase(accessMode = LocationAccessMode.BACKGROUND)
+
+            assertEquals(SkyCycleResult.BackgroundLocationUnavailable, resultado)
+            coVerify(exactly = 0) { observeSky(any(), any()) }
+            coVerify(exactly = 0) { locationRepository.getCurrentLocation() }
+        }
+    }
+
+    @Test
+    fun `em primeiro plano a permissao de segundo plano e irrelevante`() = runTest {
+        // O ecrã tem a app visível; exigir-lhe a permissão de segundo plano seria pedir o que não é
+        // preciso, e partia a app inteira para quem só concedeu "durante a utilização".
+        every { locationRepository.hasLocationPermission() } returns true
+        every { locationRepository.hasBackgroundLocationPermission() } returns false
+        coEvery { locationRepository.getCurrentLocation() } returns LISBON
+        every { settingsRepository.settings } returns flowOf(SkySettings())
+        every { timeProvider.nowEpochSeconds() } returns 1L
+        coEvery { observeSky(LISBON, any()) } returns Result.success(emptyList())
+
+        assertTrue(useCase() is SkyCycleResult.Success)
+    }
+
+    @Test
+    fun `sem permissao de todo nao chega a perguntar pela de segundo plano`() = runTest {
+        // A ordem importa: a permissão em falta é uma só causa, e perguntar as duas produziria duas
+        // mensagens diferentes para o mesmo problema.
+        every { locationRepository.hasLocationPermission() } returns false
+
+        assertEquals(SkyCycleResult.NoPermission, useCase(accessMode = LocationAccessMode.BACKGROUND))
     }
 }

@@ -217,4 +217,19 @@ class SkyRefreshDecisionTest {
             )
         }
     }
+
+    @Test
+    fun `sem localizacao de segundo plano grava e termina, nunca reintenta`() {
+        // O coração da correção do defeito da 005. Com `Retry`, o worker acordava, falhava e
+        // reintentava indefinidamente — a permissão não aparece por insistência — e o widget ficava
+        // preso em "ainda sem dados" com a bateria a ser gasta em tentativas impossíveis.
+        val decisao = SkyRefreshDecision.decide(SkyCycleResult.BackgroundLocationUnavailable, agora)
+
+        assertEquals(SkyWidgetSnapshot.PermissionMissing(agora), decisao.snapshot)
+        assertEquals(
+            "reintentar aqui é o defeito: a permissão nunca aparece sozinha",
+            WorkOutcome.Success,
+            decisao.outcome,
+        )
+    }
 }
