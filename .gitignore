@@ -33,3 +33,4 @@ keystore.properties
 
 # Fonte descarregada da tabela de operadores: regenerar com tools/airlines/build_airlines_json.py
 tools/airlines/airlines.dat
+lastSession

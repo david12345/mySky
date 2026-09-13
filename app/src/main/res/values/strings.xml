@@ -4,6 +4,24 @@
     <string name="widget_label">mySky — aviões no céu</string>
     <string name="widget_description">Mostra o avião mais visível sobre a tua localização.</string>
 
+    <!-- Widget: os cinco estados (005-sky-widget). Presente e passado são strings **separadas**, e
+         não uma frase montada com o verbo interpolado: uma frase feita em pedaços é uma frase que
+         alguém pode montar mal. -->
+    <string name="widget_no_data_title">Ainda sem dados</string>
+    <string name="widget_no_data_detail">A primeira leitura aparece dentro de minutos.</string>
+    <string name="widget_permission_title">Falta a localização</string>
+    <string name="widget_permission_detail">Toca para abrir a app e dar permissão.</string>
+    <string name="widget_empty_fresh_title">Céu livre</string>
+    <string name="widget_empty_fresh_detail">Nenhum avião no teu céu · %1$s</string>
+    <string name="widget_empty_stale_title">Estava livre</string>
+    <string name="widget_empty_stale_detail">Nenhum avião %1$s</string>
+    <string name="widget_no_callsign">Aeronave sem indicativo</string>
+    <!-- Presente: só quando a observação é recente o bastante para isto ser plausível. -->
+    <string name="widget_fresh_detail">%1$d° acima do horizonte · %2$s</string>
+    <!-- Passado: um avião atravessa o céu em 4 a 5 minutos. -->
+    <string name="widget_stale_detail">Estava a %1$d° %2$s</string>
+    <string name="widget_more_flights">+%1$d</string>
+
     <!-- Rationale das permissões: mostrado ANTES do diálogo do sistema. -->
     <string name="permission_location_rationale">Para saber que aviões estão sobre ti, a mySky precisa da tua localização. A posição é usada apenas no teu dispositivo, para calcular a distância e o ângulo até cada avião.</string>
     <string name="permission_background_location_rationale">Para te avisar quando passa um avião mesmo por cima, mesmo com a app fechada, a mySky precisa de aceder à localização em segundo plano. Podes usar a app sem isto — só não recebes notificações com a app fechada.</string>

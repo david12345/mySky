@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    O tamanho cresceu de 3x1 para 3x2 nesta feature: o widget passou a ter três linhas de texto —
+    indicativo, companhia e "47° acima do horizonte · há 3 min" — e em 60dp a última seria cortada.
+    Cortar precisamente a linha do instante seria o pior corte possível, porque é ela que impede o
+    widget de afirmar presença sem dizer quando.
+
+    `updatePeriodMillis="0"` é deliberado: quem atualiza é o WorkManager, com a cadência que o
+    utilizador escolheu. O mecanismo do AppWidget tem um mínimo de 30 minutos e não respeita
+    definições nenhumas.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_description"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:minWidth="180dp"
-    android:minHeight="60dp"
+    android:minHeight="110dp"
     android:resizeMode="horizontal|vertical"
     android:targetCellWidth="3"
-    android:targetCellHeight="1"
+    android:targetCellHeight="2"
     android:previewImage="@mipmap/ic_launcher"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen" />

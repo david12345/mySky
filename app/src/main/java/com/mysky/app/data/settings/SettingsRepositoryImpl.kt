@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.mysky.app.domain.model.AltitudeUnit
 import com.mysky.app.domain.model.DistanceUnit
 import com.mysky.app.domain.model.SkySettings
+import com.mysky.app.di.SettingsStore
 import com.mysky.app.domain.repository.SettingsRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,7 +41,7 @@ import kotlinx.coroutines.flow.retryWhen
  */
 @Singleton
 class SettingsRepositoryImpl @Inject constructor(
-    private val store: DataStore<Preferences>,
+    @SettingsStore private val store: DataStore<Preferences>,
 ) : SettingsRepository {
 
     override val settings: Flow<SkySettings> = store.data

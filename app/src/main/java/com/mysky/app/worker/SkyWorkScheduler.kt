@@ -1,22 +1,26 @@
 package com.mysky.app.worker
 
 import android.content.Context
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.mysky.app.domain.model.SkySettings
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Ponto único de agendamento do WorkManager. Nenhuma outra classe deve criar `WorkRequest`s:
- * assim o limite de 15 minutos e as `Constraints` de rede ficam garantidos num sítio só.
+ * O único ponto de criação de `WorkRequest`s do *sky refresh* (princípio IV, FR-023).
  *
- * TODO(feature/widget): implementar
- *  - `schedulePeriodicRefresh`: `PeriodicWorkRequestBuilder` com o intervalo das definições,
- *    forçado a >= [SkySettings.MIN_REFRESH_INTERVAL_MINUTES], `NetworkType.CONNECTED`,
- *    backoff exponencial e `ExistingPeriodicWorkPolicy.UPDATE`;
- *  - `cancelPeriodicRefresh`: quando não há widget nem notificações ativas;
- *  - `requestImmediateRefresh`: `OneTimeWorkRequest` expedito para o tap-to-refresh do widget.
+ * Não decide **se** o trabalho deve existir — isso é do [SkyBackgroundWorkCoordinator] (AD-026).
+ * Aqui só se sabe construir e enfileirar, o que mantém o mínimo de 15 minutos, as restrições de rede
+ * e o backoff garantidos num sítio só.
  */
 @Singleton
 class SkyWorkScheduler @Inject constructor(
@@ -24,15 +28,55 @@ class SkyWorkScheduler @Inject constructor(
 ) {
     private val workManager: WorkManager get() = WorkManager.getInstance(context)
 
+    private val networkRequired = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .build()
+
+    /**
+     * Agenda ou reagenda a cadência de fundo.
+     *
+     * O intervalo vem já corrigido de [SkySettings.coerced] (AD-022), por isso **não se valida aqui**:
+     * duplicar a correção seria criar o segundo sítio onde o mesmo limite vive, que foi exatamente o
+     * defeito que a revisão da 004 encontrou.
+     *
+     * `UPDATE` sobre um nome único é o que faz a FR-025 — mudar a cadência substitui o trabalho em vez
+     * de acumular um segundo — e o que garante a FR-021: um só trabalho, haja quantos widgets houver.
+     */
     fun schedulePeriodicRefresh(settings: SkySettings) {
-        TODO("Implementar durante a feature 'widget' (ver .specify/)")
+        val request = PeriodicWorkRequestBuilder<SkyRefreshWorker>(
+            settings.refreshIntervalMinutes, TimeUnit.MINUTES,
+        )
+            .setConstraints(networkRequired)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.MINUTES)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            SkyRefreshWorker.PERIODIC_WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request,
+        )
     }
 
     fun cancelPeriodicRefresh() {
-        TODO("Implementar durante a feature 'widget' (ver .specify/)")
+        workManager.cancelUniqueWork(SkyRefreshWorker.PERIODIC_WORK_NAME)
     }
 
+    /**
+     * O toque em "atualizar" do widget.
+     *
+     * `KEEP` e não `REPLACE`: dois toques enquanto um pedido está em curso valem por um (FR-017).
+     * Com `REPLACE`, o segundo toque cancelaria a consulta já paga e começaria outra — gastando duas
+     * do orçamento diário para obter um resultado.
+     */
     fun requestImmediateRefresh() {
-        TODO("Implementar durante a feature 'widget' (ver .specify/)")
+        val request = OneTimeWorkRequestBuilder<SkyRefreshWorker>()
+            .setConstraints(networkRequired)
+            .build()
+
+        workManager.enqueueUniqueWork(
+            SkyRefreshWorker.ONE_TIME_WORK_NAME,
+            ExistingWorkPolicy.KEEP,
+            request,
+        )
     }
 }

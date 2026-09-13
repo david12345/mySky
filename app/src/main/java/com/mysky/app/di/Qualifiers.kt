@@ -16,3 +16,20 @@ annotation class DefaultDispatcher
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class ApplicationScope
+
+/**
+ * O DataStore das preferências do utilizador.
+ *
+ * Qualificado, tal como [WidgetSnapshotStore], por uma razão concreta: sem qualificador, quem
+ * injetasse um `DataStore<Preferences>` receberia um dos dois **em silêncio**, conforme a ordem dos
+ * bindings — e o pior desfecho seria o trabalho de fundo passar a escrever snapshots por cima das
+ * escolhas do utilizador, de 30 em 30 minutos. Com os dois qualificados, o engano deixa de compilar.
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class SettingsStore
+
+/** O DataStore do último resultado do trabalho de fundo. Ver [SettingsStore] para o porquê. */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class WidgetSnapshotStore

@@ -4,39 +4,53 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.mysky.app.domain.repository.LocationRepository
-import com.mysky.app.domain.repository.SettingsRepository
-import com.mysky.app.domain.usecase.ObserveSkyUseCase
-import com.mysky.app.notification.OverheadNotifier
+import com.mysky.app.domain.repository.SkyWidgetRepository
+import com.mysky.app.domain.time.TimeProvider
+import com.mysky.app.domain.usecase.RunSkyCycleUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
 /**
- * Trabalho periódico que alimenta o widget e as notificações.
+ * Trabalho periódico que alimenta o widget e, a partir da feature seguinte, as notificações.
  *
- * Restrições de plataforma que este worker tem de respeitar:
- *  - o intervalo mínimo de `PeriodicWorkRequest` é 15 minutos e o sistema pode adiar mais em
- *    Doze/App Standby: a app nunca deve prometer tempo real ao utilizador;
- *  - uma execução falhada por falta de rede devolve `Result.retry()`, não `failure()`;
- *  - sem permissão de localização o trabalho termina com `Result.success()` e um estado de widget
- *    explicativo — repetir não resolveria nada e só gastaria bateria.
+ * **Não tem lógica.** A sequência do ciclo vive no [RunSkyCycleUseCase], partilhada com o ecrã
+ * (AD-028), e a decisão do que gravar e do que devolver vive no [SkyRefreshDecision], que é uma
+ * função pura. O que sobra aqui é encadeamento — e é assim de propósito: sem `work-testing` nem
+ * Robolectric, tudo o que ficasse dentro desta classe deixava de ser verificável.
  *
- * TODO(feature/widget): obter localização, chamar [ObserveSkyUseCase], guardar o resultado no
- *  estado do Glance, pedir a atualização do widget e delegar em [OverheadNotifier] quando as
- *  notificações estiverem ativas.
+ * Restrições de plataforma respeitadas a montante: o mínimo de 15 minutos vem de
+ * `SkySettings.coerced()`, as `Constraints` de rede e o backoff do [SkyWorkScheduler].
  */
 @HiltWorker
 class SkyRefreshWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val observeSky: ObserveSkyUseCase,
-    private val locationRepository: LocationRepository,
-    private val settingsRepository: SettingsRepository,
-    private val overheadNotifier: OverheadNotifier,
+    private val runSkyCycle: RunSkyCycleUseCase,
+    private val skyWidgetRepository: SkyWidgetRepository,
+    private val widgetRefresher: WidgetRefresher,
+    private val timeProvider: TimeProvider,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        TODO("Implementar durante a feature 'widget' (ver .specify/)")
+        val decision = SkyRefreshDecision.decide(
+            result = runSkyCycle(),
+            nowEpochSeconds = timeProvider.nowEpochSeconds(),
+        )
+
+        // `null` significa "não toques no que lá está" — é o que faz uma falha nunca apagar o que o
+        // utilizador estava a ver (FR-014).
+        decision.snapshot?.let { snapshot ->
+            skyWidgetRepository.save(snapshot)
+            // Só se repinta quando há coisa nova para mostrar. Repintar sobre uma falha faria os
+            // widgets piscar sem nada mudar.
+            widgetRefresher.refreshAll()
+        }
+
+        return when (decision.outcome) {
+            WorkOutcome.Success -> Result.success()
+            WorkOutcome.Retry -> Result.retry()
+            WorkOutcome.Failure -> Result.failure()
+        }
     }
 
     companion object {
