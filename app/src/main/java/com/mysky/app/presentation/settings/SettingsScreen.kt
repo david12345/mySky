@@ -1,5 +1,10 @@
 package com.mysky.app.presentation.settings
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,11 +30,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mysky.app.R
+import com.mysky.app.presentation.permission.openAppSettings
 import com.mysky.app.domain.model.RouteUpdateError
 import com.mysky.app.domain.model.RouteUpdateState
 import java.text.DateFormat
@@ -50,8 +57,24 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(state.updateState) { viewModel.onUpdateFinished(state.updateState) }
+
+    // A única forma de detetar que o utilizador revogou uma permissão nas definições do Android: o
+    // sistema não avisa ninguém, por isso volta-se a perguntar sempre que o ecrã reaparece. É o mesmo
+    // padrão que o ecrã principal já usa para a localização.
+    LifecycleResumeEffect(Unit) {
+        viewModel.onScreenVisible()
+        onPauseOrDispose { }
+    }
+
+    // `POST_NOTIFICATIONS` só é pedida aqui, e só quando o utilizador liga a opção — nunca no
+    // arranque, como a constituição exige. Abaixo da API 33 a permissão não existe e o pedido é
+    // dispensado; o interruptor do sistema continua a ser coberto por `areNotificationsEnabled()`.
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { viewModel.onScreenVisible() }
 
     Scaffold(
         modifier = modifier,
@@ -103,6 +126,25 @@ fun SettingsScreen(
                 state = state,
                 onDistanceUnitChanged = viewModel::onDistanceUnitChanged,
                 onAltitudeUnitChanged = viewModel::onAltitudeUnitChanged,
+            )
+
+            Spacer(Modifier.padding(4.dp))
+            Text(
+                text = stringResource(R.string.settings_section_notifications),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            HorizontalDivider()
+
+            NotificationsSection(
+                state = state,
+                onEnabledChanged = { enabled ->
+                    viewModel.onNotificationsEnabledChanged(enabled)
+                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                },
+                onThresholdChanged = viewModel::onNotificationThresholdChanged,
+                onOpenSystemSettings = { context.openAppSettings() },
             )
 
             Spacer(Modifier.padding(4.dp))

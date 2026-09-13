@@ -156,7 +156,15 @@ private fun PermissionMessage(
     }
 }
 
-private fun Context.openAppSettings() {
+/**
+ * Abre as definições da app no sistema.
+ *
+ * Deixou de ser privada na 006: é o mesmo destino para três coisas diferentes — recusa permanente da
+ * localização, notificações bloqueadas, e a permissão de localização em segundo plano, que a partir da
+ * API 30 **só** pode ser concedida aqui e não por diálogo. Duplicar isto noutro ficheiro seria ter
+ * dois sítios a construir a mesma intenção.
+ */
+internal fun Context.openAppSettings() {
     startActivity(
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),

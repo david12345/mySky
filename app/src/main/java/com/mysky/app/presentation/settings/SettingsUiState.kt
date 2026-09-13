@@ -1,6 +1,7 @@
 package com.mysky.app.presentation.settings
 
 import com.mysky.app.domain.model.RouteUpdateState
+import com.mysky.app.domain.model.NotificationPolicy
 import com.mysky.app.domain.model.SkyBudget
 import com.mysky.app.domain.model.SkyRange
 import com.mysky.app.domain.model.SkySettings
@@ -19,6 +20,10 @@ data class SettingsUiState(
     val updateState: RouteUpdateState = RouteUpdateState.Idle,
     // Preferências (004-settings)
     val settings: SkySettings = SkySettings(),
+    // Factos do sistema, lidos e nunca persistidos (AD-032). Vivem no estado do ecrã e não em
+    // `SkySettings` porque não são escolhas do utilizador — são o que o Android permite agora.
+    val hasNotificationPermission: Boolean = true,
+    val hasBackgroundLocationPermission: Boolean = true,
 ) {
     val isUpdating: Boolean get() = updateState is RouteUpdateState.InProgress
 
@@ -64,6 +69,25 @@ data class SettingsUiState(
      */
     val remainingScreenSeconds: Long
         get() = SkyBudget.remainingScreenSeconds(settings.refreshIntervalMinutes)
+
+    // --- Notificações (006) ---------------------------------------------------------------------
+
+    /**
+     * O estado **efetivo**, e não a intenção guardada.
+     *
+     * `settings.notificationsEnabled` é o que o utilizador quis; isto é o que a app consegue fazer.
+     * Separá-los é o que permite o utilizador revogar a permissão no Android e voltar a concedê-la
+     * sem ter de tocar outra vez no interruptor (AD-032).
+     */
+    val notificationsActive: Boolean
+        get() = settings.notificationsEnabled && hasNotificationPermission
+
+    /** Que fração das passagens esta configuração espera apanhar, entre 0 e 1. */
+    val expectedCaptureRate: Double
+        get() = NotificationPolicy.expectedCaptureRate(
+            thresholdDegrees = settings.notificationThresholdDegrees,
+            refreshIntervalMinutes = settings.refreshIntervalMinutes,
+        )
 
     /** Quais os valores que estão como vieram de fábrica (FR-012). */
     val isRadiusAtDefault: Boolean

@@ -1,5 +1,11 @@
 package com.mysky.app.presentation.settings
 
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Switch
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import com.mysky.app.domain.model.NotificationPolicy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -258,3 +264,96 @@ fun WidgetScheduleSection(
 @Composable
 private fun formatDuration(seconds: Long): String =
     stringResource(R.string.settings_hours_minutes, seconds / 3600, (seconds % 3600) / 60)
+
+/**
+ * As notificações de passagem, e o número que impede o utilizador de se sentir enganado.
+ *
+ * A taxa de captura aparece **antes** de a opção ser ligada, e não como letra pequena depois. A razão
+ * é concreta: esta feature avisa de uma pequena fração das passagens, por limites da plataforma que
+ * nenhum desenho contorna. Quem ligue sem saber isso recebe dois avisos por semana e conclui que a app
+ * está avariada — e conclui bem, porque ninguém lhe disse o que esperar.
+ */
+@Composable
+fun NotificationsSection(
+    state: SettingsUiState,
+    onEnabledChanged: (Boolean) -> Unit,
+    onThresholdChanged: (Double) -> Unit,
+    onOpenSystemSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_notifications_enabled),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    text = stringResource(R.string.settings_notifications_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = state.settings.notificationsEnabled, onCheckedChange = onEnabledChanged)
+        }
+
+        // A expectativa, sempre visível — ligada ou desligada a opção.
+        Text(
+            text = stringResource(
+                R.string.settings_capture_rate,
+                (state.expectedCaptureRate * 100).roundToInt(),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringResource(
+                R.string.settings_capture_rate_why,
+                state.settings.refreshIntervalMinutes.toInt(),
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        // Duas faltas com remédios diferentes, e ambas levam às definições do sistema — é a única via
+        // que o Android oferece para a de segundo plano a partir da API 30.
+        if (state.settings.notificationsEnabled && !state.hasNotificationPermission) {
+            PermissionWarning(R.string.settings_notifications_permission_missing, onOpenSystemSettings)
+        }
+        if (state.settings.notificationsEnabled && !state.hasBackgroundLocationPermission) {
+            PermissionWarning(R.string.settings_background_location_missing, onOpenSystemSettings)
+        }
+
+        if (state.settings.notificationsEnabled) {
+            SettingSlider(
+                label = stringResource(R.string.settings_notification_threshold),
+                help = stringResource(R.string.settings_notification_threshold_help),
+                value = state.settings.notificationThresholdDegrees,
+                // O piso é o ângulo mínimo de deteção: abaixo dele a faixa é inatingível, porque
+                // essas aeronaves nem sequer chegam a ser detetadas (AD-033).
+                range = state.settings.minElevationDegrees..90.0,
+                atDefault = state.settings.notificationThresholdDegrees ==
+                    NotificationPolicy.DEFAULT_THRESHOLD_DEGREES,
+                valueText = stringResource(
+                    R.string.settings_degrees,
+                    FlightFormatting.elevationDegrees(state.settings.notificationThresholdDegrees),
+                ),
+                onValueSettled = onThresholdChanged,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PermissionWarning(@StringRes message: Int, onOpen: () -> Unit) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(
+            text = stringResource(message),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        TextButton(onClick = onOpen, contentPadding = PaddingValues(0.dp)) {
+            Text(stringResource(R.string.settings_open_system_settings))
+        }
+    }
+}

@@ -39,23 +39,23 @@ tem valor por si: entregue sozinha, corrige o widget que hoje não funciona em A
 
 ## Fase 3: US2 — Ligar com a expectativa certa (P2)
 
-- [ ] T021 `presentation/permission/`: fluxo de `POST_NOTIFICATIONS` com rationale prévio, e o de segundo plano por encaminhamento às definições do sistema (AD-030)
-- [ ] T022 `SettingsViewModel`: interruptor de notificações, estado efetivo derivado (intenção **e** permissão, AD-032), recalculado quando o ecrã volta a ficar visível
-- [ ] T022b **Ligar o interruptor ao `reconcile()`** (FR-013). A AD-026 escreveu a condição como `hasAnyWidget() || notificationsEnabled`, mas sem esta chamada ninguém a avalia depois do toggle: quem liga as notificações **sem widget no ecrã** não agenda trabalho nenhum, e a feature fica silenciosa até ao próximo arranque da app — que pode ser dias. Vale nos dois sentidos: desligar sem widget tem de cancelar
-- [ ] T022c [P] Teste: ligar as notificações sem widget nenhum chama o `reconcile()`, e desligar também
-- [ ] T023 `SettingsUiState` ganha a taxa de captura esperada, derivada do `NotificationPolicy`
-- [ ] T024 Secção de notificações no ecrã, com a taxa esperada à vista **antes** de o utilizador ligar (FR-010)
-- [ ] T025 [P] Testes: revogar a permissão pelas costas não deixa o estado a mentir, e **não apaga a intenção guardada**
+- [X] T021 `presentation/permission/`: fluxo de `POST_NOTIFICATIONS` com rationale prévio, e o de segundo plano por encaminhamento às definições do sistema (AD-030)
+- [X] T022 `SettingsViewModel`: interruptor de notificações, estado efetivo derivado (intenção **e** permissão, AD-032), recalculado quando o ecrã volta a ficar visível
+- [X] T022b **Ligar o interruptor ao `reconcile()`** (FR-013). A AD-026 escreveu a condição como `hasAnyWidget() || notificationsEnabled`, mas sem esta chamada ninguém a avalia depois do toggle: quem liga as notificações **sem widget no ecrã** não agenda trabalho nenhum, e a feature fica silenciosa até ao próximo arranque da app — que pode ser dias. Vale nos dois sentidos: desligar sem widget tem de cancelar
+- [X] T022c [P] Teste: ligar as notificações sem widget nenhum chama o `reconcile()`, e desligar também
+- [X] T023 `SettingsUiState` ganha a taxa de captura esperada, derivada do `NotificationPolicy`
+- [X] T024 Secção de notificações no ecrã, com a taxa esperada à vista **antes** de o utilizador ligar (FR-010)
+- [X] T025 [P] Testes: revogar a permissão pelas costas não deixa o estado a mentir, e **não apaga a intenção guardada**
 
 ## Fase 4: US3 — Escolher o limiar (P3)
 
-- [ ] T026 Controlo do limiar, a escrever em `onValueChangeFinished` como os outros
-- [ ] T027 A taxa mostrada acompanha o limiar e a cadência ao vivo
-- [ ] T028 [P] Teste: subir o limiar baixa a taxa mostrada
+- [X] T026 Controlo do limiar, a escrever em `onValueChangeFinished` como os outros
+- [X] T027 A taxa mostrada acompanha o limiar e a cadência ao vivo
+- [X] T028 [P] Teste: subir o limiar baixa a taxa mostrada
 
 ## Fase 5: Fecho
 
-- [ ] T029 `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
+- [X] T029 `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
 - [ ] T030 Invocar o `reviewer` e tratar os achados
 - [ ] T031 Validação manual de [quickstart.md](./quickstart.md) — **secção 3 é a que prova a correção da 005**
 - [ ] T032 Atualizar o `CLAUDE.md`

@@ -51,6 +51,7 @@ class SettingsViewModelTest {
     private val settingsRepository = FakeSettingsRepository()
     private val requests = java.util.concurrent.atomic.AtomicInteger()
     private val coordinator = mockk<SkyBackgroundWorkCoordinator>(relaxed = true)
+    private var permissaoNotificacoes = true
 
     init {
         every { locationRepository.hasLocationPermission() } returns true
@@ -74,7 +75,7 @@ class SettingsViewModelTest {
         // A sessão só corre com alguém a observá-la; é o que faz o `requestRefresh` ter efeito
         // visível nos testes, como no ecrã real.
         backgroundScope.launch { session.observation.collect {} }
-        return SettingsViewModel(routeTableRepository, settingsRepository, session, coordinator)
+        return SettingsViewModel(routeTableRepository, settingsRepository, session, coordinator, { permissaoNotificacoes }, locationRepository)
     }
 
     // --- Invariante 1: uma alteração de critério grava e acorda o laço ---------------------------
@@ -301,6 +302,77 @@ class SettingsViewModelTest {
             val state = awaitItemWhere { it.settings.refreshIntervalMinutes == 30L }
             assertEquals(48, state.widgetQueriesPerDay)
             assertEquals(352 * 30L, state.remainingScreenSeconds)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // --- Notificações (006) ---------------------------------------------------------------------
+
+    @Test
+    fun `ligar as notificacoes reagenda o trabalho de fundo`() = runTest(mainDispatcherRule.testContext) {
+        // O achado da análise: sem esta chamada, quem liga notificações **sem widget no ecrã** não
+        // agenda trabalho nenhum. A condição "há widget ou notificações ligadas" existe desde a 005,
+        // mas ninguém a reavalia depois do toque — e a app ficava em silêncio até ao arranque
+        // seguinte, que pode ser dias.
+        val viewModel = viewModel()
+        runCurrent()
+
+        viewModel.onNotificationsEnabledChanged(true)
+        runCurrent()
+
+        assertTrue(settingsRepository.settings.first().notificationsEnabled)
+        coVerify(exactly = 1) { coordinator.reconcile() }
+    }
+
+    @Test
+    fun `desligar as notificacoes tambem reagenda`() = runTest(mainDispatcherRule.testContext) {
+        // Vale nos dois sentidos: desligar sem widget no ecrã tem de **cancelar** o trabalho, senão
+        // continua a gastar bateria e orçamento por ninguém.
+        val viewModel = viewModel()
+        settingsRepository.set(SkySettings(notificationsEnabled = true))
+        runCurrent()
+
+        viewModel.onNotificationsEnabledChanged(false)
+        runCurrent()
+
+        assertFalse(settingsRepository.settings.first().notificationsEnabled)
+        coVerify(exactly = 1) { coordinator.reconcile() }
+    }
+
+    @Test
+    fun `revogar a permissao nao apaga a intencao guardada`() = runTest(mainDispatcherRule.testContext) {
+        // A separação entre intenção e facto do sistema (AD-032). Se a app reescrevesse a intenção
+        // para falso, o utilizador que voltasse a conceder no Android tinha de tocar outra vez no
+        // interruptor sem razão nenhuma.
+        val viewModel = viewModel()
+        viewModel.onNotificationsEnabledChanged(true)
+        runCurrent()
+
+        permissaoNotificacoes = false
+        viewModel.onScreenVisible()
+        runCurrent()
+
+        viewModel.uiState.test {
+            val state = awaitItemWhere { !it.hasNotificationPermission }
+            assertFalse("o estado efetivo tem de refletir a realidade", state.notificationsActive)
+            assertTrue("a intenção guardada não se perde", state.settings.notificationsEnabled)
+            cancelAndIgnoreRemainingEvents()
+        }
+        permissaoNotificacoes = true
+    }
+
+    @Test
+    fun `subir o limiar baixa a taxa de captura mostrada`() = runTest(mainDispatcherRule.testContext) {
+        val viewModel = viewModel()
+        settingsRepository.set(SkySettings(notificationThresholdDegrees = 30.0, refreshIntervalMinutes = 30L))
+        runCurrent()
+
+        viewModel.uiState.test {
+            val aTrinta = awaitItemWhere { it.settings.notificationThresholdDegrees == 30.0 }.expectedCaptureRate
+            settingsRepository.set(SkySettings(notificationThresholdDegrees = 60.0, refreshIntervalMinutes = 30L))
+            val aSessenta = awaitItemWhere { it.settings.notificationThresholdDegrees == 60.0 }.expectedCaptureRate
+
+            assertTrue("$aSessenta devia ser menor que $aTrinta", aSessenta < aTrinta)
             cancelAndIgnoreRemainingEvents()
         }
     }

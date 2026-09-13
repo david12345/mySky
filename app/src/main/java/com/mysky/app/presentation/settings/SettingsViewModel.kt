@@ -8,6 +8,8 @@ import com.mysky.app.domain.model.RouteUpdateState
 import com.mysky.app.domain.model.SkySettings
 import com.mysky.app.domain.repository.RouteTableRepository
 import com.mysky.app.domain.repository.SettingsRepository
+import com.mysky.app.domain.repository.LocationRepository
+import com.mysky.app.domain.repository.NotificationPermission
 import com.mysky.app.presentation.sky.SkySession
 import com.mysky.app.worker.SkyBackgroundWorkCoordinator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,20 +38,68 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val skySession: SkySession,
     private val backgroundWorkCoordinator: SkyBackgroundWorkCoordinator,
+    private val notificationPermission: NotificationPermission,
+    private val locationRepository: LocationRepository,
 ) : ViewModel() {
 
     private val tableInfo = MutableStateFlow(SettingsUiState())
+
+    /**
+     * As permissões do sistema, relidas a pedido.
+     *
+     * Não são um fluxo porque o Android não emite nada quando o utilizador as muda nas definições do
+     * sistema. A app só pode voltar a perguntar — e o momento certo é quando o ecrã volta a ficar
+     * visível, que é o mesmo padrão que o `MainViewModel` já usa para a localização.
+     */
+    private val systemPermissions = MutableStateFlow(readSystemPermissions())
 
     val uiState: StateFlow<SettingsUiState> = combine(
         tableInfo,
         routeTableRepository.updateState,
         settingsRepository.settings,
-    ) { base, update, settings ->
-        base.copy(updateState = update, settings = settings)
+        systemPermissions,
+    ) { base, update, settings, permissions ->
+        base.copy(
+            updateState = update,
+            settings = settings,
+            hasNotificationPermission = permissions.first,
+            hasBackgroundLocationPermission = permissions.second,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
 
     init {
         refreshTableInfo()
+    }
+
+    /** Chamado quando o ecrã volta a ficar visível: é a única forma de detetar uma revogação. */
+    fun onScreenVisible() {
+        systemPermissions.value = readSystemPermissions()
+    }
+
+    private fun readSystemPermissions(): Pair<Boolean, Boolean> =
+        notificationPermission.isGranted() to locationRepository.hasBackgroundLocationPermission()
+
+    // --- Notificações (006) -----------------------------------------------------------------------
+
+    /**
+     * Liga ou desliga a intenção do utilizador.
+     *
+     * Chama o `reconcile()` **sempre**, e é isso que faz a feature existir para quem não tem widget:
+     * a condição de agendamento é "há widget **ou** notificações ligadas" desde a 005, mas sem esta
+     * chamada ninguém a reavalia depois do toque — e a app ficaria em silêncio até ao arranque
+     * seguinte, que pode ser dias depois.
+     */
+    fun onNotificationsEnabledChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(notificationsEnabled = enabled) }
+            backgroundWorkCoordinator.reconcile()
+        }
+    }
+
+    fun onNotificationThresholdChanged(degrees: Double) = updatePresentation {
+        // Não acorda o laço do ecrã nem reagenda: mudar o limiar não altera que aeronaves são
+        // detetadas, só quais delas merecem interromper o utilizador.
+        it.copy(notificationThresholdDegrees = degrees)
     }
 
     // --- Critérios: gravam e acordam o laço ------------------------------------------------------
