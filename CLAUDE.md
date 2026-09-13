@@ -324,6 +324,119 @@ o intervalo do controlo (FR-009), a degradação de um valor guardado inválido 
 explicativa (FR-011). E aplicar em cada leitura responde de graça a "o que acontece quando os
 limites mudarem": nada é versionado nem migrado, o valor antigo é corrigido sempre que é lido.
 
+### AD-023 — O último resultado vive num porto de domínio, não no estado do Glance
+**Corrige a AD-003**, que dizia "lê o último resultado do estado do Glance". Cria-se
+`domain/repository/SkyWidgetRepository` (`snapshot: Flow<SkyWidgetSnapshot>`, `save(snapshot)`),
+implementado sobre um DataStore próprio da app. O `SkyWidgetSnapshot` transporta o **facto bruto** —
+voos, ou céu vazio, ou permissão em falta, mais o instante — nunca a interpretação em texto.
+**Porquê:** verificado por `javap` sobre o AAR: `updateAppWidgetState` e `getAppWidgetState` exigem um
+`GlanceId`, ou seja o estado do Glance é **por instância de widget**. Com vários widgets (FR-021) o
+worker teria de escrever N cópias idênticas ou eleger uma arbitrariamente para ler depois. E as
+notificações vão precisar do mesmo resultado sem serem um widget e sem terem `GlanceId` nenhum. Um
+porto de domínio, à imagem do `RouteTableRepository` (AD-016), serve um valor a todos sem que nenhum
+conheça o outro.
+**Rejeitadas:** estado do Glance (a cardinalidade não bate); Room (uma linha, sem junções nem
+histórico — o mesmo argumento das AD-007 e AD-013 contra peso morto).
+**Consequência:** o `provideGlance` lê este porto, o que é permitido — a FR-009 proíbe **rede** na
+composição, não leitura local. Uma falha transitória **não** chama `save()`, e o valor anterior fica:
+a FR-014 sai de graça da forma do código. Fica ainda um segundo canal, efémero e por widget — esse sim
+em `GlanceStateDefinition`, que é o sítio certo para estado de UI local: o "a atualizar" e o "falhou
+por X" do toque (FR-017 a FR-019), que não são factos sobre o céu, não precisam de sobreviver à app
+nem de ser iguais em todos os widgets.
+
+### AD-024 — Os cinco estados são redução pura no domínio, avaliada no instante da leitura
+`domain/model/SkyWidgetState` selado (`NoDataYet`, `Fresh`, `Stale`, `EmptySky`, `PermissionMissing`) e
+uma função pura `evaluate(snapshot, nowEpochSeconds, freshnessWindowSeconds)`. Chamada no
+`provideGlance`, com o relógio lido **nesse** instante — nunca pré-calculada pelo worker na escrita.
+**Porquê:** é a categoria de defeito da AD-012, e o SC-003 exige verificação automática. Há também uma
+razão temporal concreta: a cadência por omissão (30 min) é **seis vezes** a janela de frescura (5 min).
+Se o worker gravasse "Fresh" à cabeça, o widget diria "está no teu céu" durante cerca de 25 dos 30
+minutos **depois** de isso deixar de ser verdade. Só reavaliar a cada composição faz o texto seguir o
+relógio.
+**Rejeitadas:** classificar no worker (fica errado, como acima); persistir a interpretação em vez do
+facto bruto (perde-se a capacidade de reavaliar com outro "agora").
+**Consequência:** o `TimeProvider` entra em quem chama a função no `widget/`, no espírito da AD-009. A
+FR-004 e a FR-019 não se misturam: os cinco estados são sobre o facto persistido (AD-023); os textos de
+falha do toque vivem no canal efémero e não passam por aqui.
+
+### AD-025 — O `worker/` não importa `androidx.glance`; a ponte é uma interface dele próprio
+`worker/WidgetRefresher`, interface com `refreshAll()` e sem tipos de Glance na assinatura,
+implementada por `widget/GlanceWidgetRefresher` com `updateAll`. O `widget/` depende do `worker/`,
+nunca o contrário.
+**Porquê:** importar Glance no worker acoplaria um componente de fundo — testável na JVM com MockK — a
+um toolkit de UI que exigiria Robolectric ou instrumentação para testar. É a mesma técnica de todas as
+portas do projeto: a fronteira fica onde a dependência pesada começa.
+**Rejeitadas:** o worker a importar Glance (mistura as duas naturezas); um `BroadcastReceiver` genérico
+(mecanismo a mais para um `refreshAll()` que já é idempotente).
+**Consequência:** `RefreshSkyWidgetAction` chama `SkyWorkScheduler.requestImmediateRefresh()` com
+`ExistingWorkPolicy.KEEP`, como o `RouteTableUpdateWorkScheduler` — dois toques com um pedido em curso
+não duplicam (FR-017), e o único ponto de `WorkRequest` continua a ser o scheduler (FR-023).
+
+### AD-026 — O agendamento é reconciliado a partir da verdade, não contado por eventos
+`worker/SkyBackgroundWorkCoordinator` com um método `reconcile()`: pergunta "há pelo menos um widget?"
+e decide agendar ou cancelar. `onEnabled`/`onDisabled`/`onUpdate` do receiver chamam-no para reação
+imediata; `Application.onCreate()` chama-o uma vez por arranque, como rede de segurança.
+**Porquê:** o `onEnabled` só dispara na transição 0→1 **de sempre** para aquele receiver. Quem já tinha
+o widget da v1.0.0 nunca mais o recebe, e ficaria sem agendamento para sempre (FR-022). Reconciliar a
+partir do estado real — quantos widgets existem agora — em vez de contar deltas dispensa qualquer
+migração: no primeiro arranque depois da atualização, o `reconcile()` encontra o widget lá e agenda,
+sem flag nenhuma. `enqueueUniquePeriodicWork` é idempotente, por isso chamá-lo de mais não custa.
+**Rejeitadas:** confiar só em `onEnabled`/`onDisabled` (não cobre a FR-022); um `WorkRequest` de
+arranque para reparar o agendamento (um terceiro tipo de trabalho para o que uma chamada direta e
+idempotente resolve).
+**Consequência, e é o que prepara a feature seguinte:** a condição escreve-se desde já como
+`hasAnyWidget() || notificationsEnabled`, não como "há widget". As notificações **não reescrevem este
+ficheiro** — acrescentam a leitura que já existe em `SkySettings` e chamam `reconcile()` a partir do
+seu próprio interruptor. É a AD-016 lida ao contrário: um único ponto de **decisão** de agendar, tal
+como já há um único ponto de **criação** de `WorkRequest`.
+
+### AD-027 — A cadência reagenda pelo caminho das definições; o custo em orçamento é domínio
+O `SettingsViewModel` ganha uma terceira categoria de escrita ao lado de "acorda a sessão" e "não
+acorda nada": `updateSchedule`, que grava `refreshIntervalMinutes` e chama o `reconcile()` da AD-026,
+que já sabe agendar com `ExistingPeriodicWorkPolicy.UPDATE` (FR-025). A correção de um valor abaixo do
+mínimo (FR-026) **não se duplica**: continua só em `SkySettings.coerced()` (AD-022), que corre em toda
+leitura — o scheduler nunca vê um valor por corrigir. O custo em consultas e em tempo de ecrã (FR-027)
+vive como função pura ao lado do `SkyRange`, com constante única `DAILY_QUERY_BUDGET = 400`, consumida
+por um `get()` derivado no `SettingsUiState`.
+**Porquê:** passar pelo `reconcile()` em vez de chamar o scheduler evita um segundo caminho para o
+mesmo agendamento — mudar a cadência também tem de respeitar "isto devia sequer existir?". E o risco
+aqui é o simétrico do defeito que a revisão da 004 apanhou: lá foi um número escrito de duas maneiras
+que divergiu; aqui seria o 400 escrito outra vez num sítio novo. Um ponto de verdade, com um teste que
+verifica o SC-007 de ponta a ponta (30 min → 48 consultas → 12% → ~2h56m).
+**Rejeitadas:** o ViewModel a chamar o scheduler diretamente (dois sítios a decidir se deve existir
+trabalho); calcular o custo na `presentation` (esconderia a constante num ficheiro de UI, exatamente
+onde a 004 mostrou que ela se perde).
+**Consequência:** cumpre a promessa que a AD-019 deixou em aberto — era essa AD que proibia a 004 de
+ligar um controlo a `refreshIntervalMinutes`. A armadilha que ela registou (não confundir com os 30 s
+do laço da sessão) mantém-se válida.
+
+### AD-028 — O "um ciclo" sai para um caso de uso partilhado; a `SkySession` nunca é injetada
+`domain/usecase/RunSkyCycleUseCase` encapsula o que o `SkySession.refreshOnce()` já faz **sem** o laço:
+verificar permissão, obter posição, ler os critérios, chamar o `ObserveSkyUseCase`, devolver um
+resultado selado (`Success(flights, observedAt)` | `NoPermission` | `Failure(SkyError)`). A
+`SkySession` passa a delegar nele e mantém por cima a sua política (o `StateFlow`, o recuo de 429, o
+laço de 30 s). O `SkyRefreshWorker` chama o mesmo caso de uso e aplica a **sua** política.
+
+| Situação | `Result` do WorkManager | Porquê |
+|---|---|---|
+| Sem permissão | `success()` | repetir não resolve nada; grava o snapshot de permissão em falta |
+| `NoConnection` / `LocationUnavailable` | `retry()` | transitório; não apaga o snapshot anterior |
+| `RateLimited` | `success()` | reintentar gasta orçamento já esgotado (AD-010); o snapshot fica |
+| `Unexpected` | `failure()` | não é acionável por retry; o trabalho periódico sobrevive na mesma |
+| Sucesso | `success()` | grava, chama o `WidgetRefresher` e o `OverheadNotifier` |
+
+**Porquê:** a alternativa era duplicar no worker a sequência que a sessão já implementa, em dois sítios
+obrigados a concordar para sempre. É o género de duplicação que a revisão da 004 apanhou tarde. Extrair
+o núcleo comum elimina a categoria de defeito **sem** violar a AD-011: não é a `SkySession` a ser
+injetada no worker — é um caso de uso de domínio, sem estado, sem laço e sem `StateFlow`, que ambos
+chamam.
+**Rejeitadas:** injetar a `SkySession` (proibido pela AD-011); duplicar a sequência (divergência já
+demonstrada nesta app); alargar o `max(intervalo, retryAfter)` ao worker periódico (o
+`PeriodicWorkRequest` não tem esse controlo por ciclo sem cancelar e reagendar).
+**Consequência:** o `SkySession.refreshOnce()` é alterado nesta feature para delegar — refactor
+previsto, não acidente de alcance. Os testes existentes continuam a valer porque o comportamento
+observável não muda.
+
 ## Estrutura de pastas
 
 ```
