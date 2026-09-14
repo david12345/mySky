@@ -6,6 +6,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import com.mysky.app.domain.model.NotificationPolicy
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,11 +62,14 @@ fun SkySettingsSection(
             help = stringResource(R.string.settings_radius_help),
             value = settings.detectionRadiusMeters,
             range = SkySettings.RADIUS_RANGE,
+            step = SkySettings.RADIUS_STEP_METERS,
             atDefault = state.isRadiusAtDefault,
-            valueText = stringResource(
-                UnitLabels.distance(settings.distanceUnit),
-                FlightFormatting.distance(settings.detectionRadiusMeters, settings.distanceUnit),
-            ),
+            valueText = { meters ->
+                stringResource(
+                    UnitLabels.distance(settings.distanceUnit),
+                    FlightFormatting.distance(meters, settings.distanceUnit),
+                )
+            },
             onValueSettled = onRadiusChanged,
         )
 
@@ -87,11 +95,11 @@ fun SkySettingsSection(
             help = stringResource(R.string.settings_min_elevation_help),
             value = settings.minElevationDegrees,
             range = SkySettings.MIN_ELEVATION_RANGE,
+            step = SkySettings.MIN_ELEVATION_STEP_DEGREES,
             atDefault = state.isMinElevationAtDefault,
-            valueText = stringResource(
-                R.string.settings_degrees,
-                FlightFormatting.elevationDegrees(settings.minElevationDegrees),
-            ),
+            valueText = { degrees ->
+                stringResource(R.string.settings_degrees, FlightFormatting.elevationDegrees(degrees))
+            },
             onValueSettled = onMinElevationChanged,
         )
 
@@ -100,11 +108,14 @@ fun SkySettingsSection(
             help = stringResource(R.string.settings_min_altitude_help),
             value = settings.minAltitudeMeters,
             range = SkySettings.MIN_ALTITUDE_RANGE,
+            step = SkySettings.MIN_ALTITUDE_STEP_METERS,
             atDefault = state.isMinAltitudeAtDefault,
-            valueText = stringResource(
-                UnitLabels.altitude(settings.altitudeUnit),
-                FlightFormatting.altitude(settings.minAltitudeMeters, settings.altitudeUnit),
-            ),
+            valueText = { meters ->
+                stringResource(
+                    UnitLabels.altitude(settings.altitudeUnit),
+                    FlightFormatting.altitude(meters, settings.altitudeUnit),
+                )
+            },
             onValueSettled = onMinAltitudeChanged,
         )
     }
@@ -123,36 +134,74 @@ private fun SettingSlider(
     help: String,
     value: Double,
     range: ClosedFloatingPointRange<Double>,
+    step: Double,
     atDefault: Boolean,
-    valueText: String,
+    // `@Composable` porque quem formata precisa de `stringResource`: a unidade e o símbolo
+    // vêm de recursos, não de literais no código.
+    valueText: @Composable (Double) -> String,
     onValueSettled: (Double) -> Unit,
 ) {
-    // O valor em trânsito vive aqui, no controlo, e só sai daqui quando o dedo levanta.
+    // O valor em trânsito vive aqui, no controlo, e só **sai** daqui quando o dedo levanta.
     //
     // O `remember(value)` reinicia o cursor quando o valor gravado muda, e é isso que faz "repor
     // valores de origem" e a correção por `coerced()` aparecerem no cursor sem código extra. O preço:
     // se o valor gravado mudar **enquanto** o dedo ainda está no cursor, ele salta. Na prática exige
     // multitoque — arrastar aqui e tocar em "repor" ao mesmo tempo — e o resultado é o valor correto,
-    // só com um salto visível. Anotado em vez de resolvido: guardar o valor em trânsito através de uma
-    // reposição pedida pelo utilizador dava um cursor a discordar do que está gravado, que é pior.
+    // só com um salto visível.
     var inFlight by remember(value) { mutableFloatStateOf(value.toFloat()) }
+
+    // O número mostrado segue o **dedo**, não o que está gravado.
+    //
+    // Era daqui que vinha a queixa de "o valor só aparece depois de largar a barra": escrever apenas
+    // ao largar é a decisão certa para **gravar** — um arrasto ligado a cada movimento gastaria o
+    // orçamento de um dia — mas ela tinha sido aplicada sem querer também ao **mostrar**, que não
+    // custa nada. Arrastar às cegas e só ver o resultado no fim é o pior de dois mundos: nem preciso,
+    // nem informativo.
+    val settled = { target: Double -> onValueSettled(target.coerceIn(range).snapTo(step, range)) }
 
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(text = valueText, style = MaterialTheme.typography.bodyLarge)
+            Text(text = valueText(inFlight.toDouble()), style = MaterialTheme.typography.bodyLarge)
         }
         Text(
             text = help,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Slider(
-            value = inFlight,
-            onValueChange = { inFlight = it },
-            onValueChangeFinished = { onValueSettled(inFlight.toDouble()) },
-            valueRange = range.start.toFloat()..range.endInclusive.toFloat(),
-        )
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Os dois botões são a resposta direta a "é difícil fazer incrementos pequenos". Num
+            // telemóvel típico o cursor do raio tem 426 m por dp — **um dedo cobre mais de 4 km** — e
+            // nenhuma quantidade de cuidado a arrastar resolve isso. Um toque que mexe exatamente um
+            // passo resolve.
+            NudgeButton(
+                icon = Icons.Default.Remove,
+                description = stringResource(R.string.settings_decrease, label),
+                enabled = inFlight.toDouble() > range.start,
+                onClick = { settled(inFlight.toDouble() - step) },
+            )
+
+            Slider(
+                value = inFlight,
+                onValueChange = { inFlight = it },
+                onValueChangeFinished = { settled(inFlight.toDouble()) },
+                valueRange = range.start.toFloat()..range.endInclusive.toFloat(),
+                // Valores discretos, e não por gosto de detentes: sem eles o cursor devolve
+                // 30 161,8 m onde o utilizador queria 30 000, e como o "valor de origem" é comparado
+                // por igualdade exata, ele **nunca mais** conseguiria lá voltar com o dedo.
+                steps = stepCount(range, step),
+                modifier = Modifier.weight(1f),
+            )
+
+            NudgeButton(
+                icon = Icons.Default.Add,
+                description = stringResource(R.string.settings_increase, label),
+                enabled = inFlight.toDouble() < range.endInclusive,
+                onClick = { settled(inFlight.toDouble() + step) },
+            )
+        }
+
         if (atDefault) {
             Text(
                 text = stringResource(R.string.settings_at_default),
@@ -162,6 +211,37 @@ private fun SettingSlider(
             )
         }
     }
+}
+
+@Composable
+private fun NudgeButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick, enabled = enabled) {
+        Icon(imageVector = icon, contentDescription = description)
+    }
+}
+
+/**
+ * Quantos valores intermédios o cursor oferece.
+ *
+ * O `steps` do Material conta os pontos **entre** os extremos, por isso é o número de intervalos menos
+ * um. Nunca negativo: um passo maior do que o próprio intervalo devolve um cursor contínuo em vez de
+ * um argumento inválido.
+ */
+private fun stepCount(range: ClosedFloatingPointRange<Double>, step: Double): Int {
+    if (step <= 0.0) return 0
+    return ((range.endInclusive - range.start) / step).roundToInt().minus(1).coerceAtLeast(0)
+}
+
+/** O valor mais próximo que assenta na grelha, sem nunca sair do intervalo. */
+private fun Double.snapTo(step: Double, range: ClosedFloatingPointRange<Double>): Double {
+    if (step <= 0.0) return this
+    val snapped = range.start + ((this - range.start) / step).roundToInt() * step
+    return snapped.coerceIn(range)
 }
 
 /** Os seletores de unidade. Sem eles, toda a canalização das unidades ficaria sem torneira. */
@@ -243,8 +323,9 @@ fun WidgetScheduleSection(
             help = stringResource(R.string.settings_refresh_interval_help),
             value = minutes.toDouble(),
             range = SkySettings.REFRESH_INTERVAL_RANGE.first.toDouble()..SkySettings.REFRESH_INTERVAL_RANGE.last.toDouble(),
-            atDefault = minutes == SkySettings.MIN_REFRESH_INTERVAL_MINUTES,
-            valueText = stringResource(R.string.settings_minutes, minutes.toInt()),
+            step = SkySettings.REFRESH_INTERVAL_STEP_MINUTES.toDouble(),
+            atDefault = minutes == SkySettings.DEFAULT_REFRESH_INTERVAL_MINUTES,
+            valueText = { m -> stringResource(R.string.settings_minutes, m.roundToInt()) },
             onValueSettled = { onRefreshIntervalChanged(it.roundToLong()) },
         )
 
@@ -342,12 +423,12 @@ fun NotificationsSection(
                 // O piso é o ângulo mínimo de deteção: abaixo dele a faixa é inatingível, porque
                 // essas aeronaves nem sequer chegam a ser detetadas (AD-033).
                 range = state.settings.minElevationDegrees..90.0,
+                step = SkySettings.NOTIFICATION_THRESHOLD_STEP_DEGREES,
                 atDefault = state.settings.notificationThresholdDegrees ==
                     NotificationPolicy.DEFAULT_THRESHOLD_DEGREES,
-                valueText = stringResource(
-                    R.string.settings_degrees,
-                    FlightFormatting.elevationDegrees(state.settings.notificationThresholdDegrees),
-                ),
+                valueText = { degrees ->
+                    stringResource(R.string.settings_degrees, FlightFormatting.elevationDegrees(degrees))
+                },
                 onValueSettled = onThresholdChanged,
             )
         }

@@ -228,4 +228,76 @@ class SkySettingsTest {
     fun `o limiar de aviso de origem sao trinta graus`() {
         assertEquals(30.0, SkySettings().notificationThresholdDegrees, 0.0)
     }
+
+    // --- A grelha de valores, e o defeito que ela corrige ---------------------------------------
+
+    @Test
+    fun `um valor entre pontos da grelha e trazido para o ponto mais proximo`() {
+        // Era o que um arrasto produzia: num telemóvel típico o cursor do raio tem 426 m por dp, e o
+        // ponto mais próximo dos 30 km dava 30 161,8 m. Não é mais preciso do que 30 000 — a caixa de
+        // consulta e as posições das aeronaves têm erro muito maior — é ruído com ar de precisão.
+        assertEquals(30_000.0, SkySettings(detectionRadiusMeters = 30_161.8).coerced().detectionRadiusMeters, 0.001)
+        assertEquals(27_000.0, SkySettings(detectionRadiusMeters = 27_400.0).coerced().detectionRadiusMeters, 0.001)
+    }
+
+    @Test
+    fun `o valor de origem volta a ser alcancavel com o dedo`() {
+        // **O defeito que ninguém reportou e que vinha da mesma causa.** "Está de origem" é comparado
+        // por igualdade exata de `Double`; sem grelha, um utilizador que tocasse uma vez no cursor
+        // nunca mais conseguia voltar ao valor de fábrica, e a etiqueta desaparecia para sempre.
+        val quaseDeOrigem = SkySettings(detectionRadiusMeters = 30_161.8).coerced()
+
+        assertEquals(SkySettings().detectionRadiusMeters, quaseDeOrigem.detectionRadiusMeters, 0.0)
+        assertTrue("tem de ser igualdade exata, que é como o ecrã compara", 
+            quaseDeOrigem.detectionRadiusMeters == SkySettings().detectionRadiusMeters)
+    }
+
+    @Test
+    fun `o angulo deixa de guardar mais precisao do que mostra`() {
+        // Guardava-se 27,38° e mostrava-se 27: o ecrã e o que estava gravado a discordarem em silêncio.
+        assertEquals(27.0, SkySettings(minElevationDegrees = 27.38).coerced().minElevationDegrees, 0.001)
+    }
+
+    @Test
+    fun `a cadencia assenta em multiplos de cinco minutos a contar do minimo`() {
+        // A grelha parte do mínimo da plataforma e não do zero: 15, 20, 25… Escolher entre 37 e 38
+        // minutos seria fingir uma precisão que o Android não honra, porque adia o trabalho na mesma.
+        assertEquals(20L, SkySettings(refreshIntervalMinutes = 22L).coerced().refreshIntervalMinutes)
+        assertEquals(15L, SkySettings(refreshIntervalMinutes = 16L).coerced().refreshIntervalMinutes)
+        assertEquals(30L, SkySettings(refreshIntervalMinutes = 30L).coerced().refreshIntervalMinutes)
+    }
+
+    @Test
+    fun `a grelha nunca empurra um valor para fora do intervalo`() {
+        // O arredondamento acontece antes do corte, por isso um valor junto ao topo não pode ser
+        // arredondado para cima e sair do permitido.
+        val noTopo = SkySettings(
+            detectionRadiusMeters = SkySettings.RADIUS_RANGE.endInclusive,
+            minElevationDegrees = SkySettings.MIN_ELEVATION_RANGE.endInclusive,
+            minAltitudeMeters = SkySettings.MIN_ALTITUDE_RANGE.endInclusive,
+            refreshIntervalMinutes = SkySettings.REFRESH_INTERVAL_RANGE.last,
+            notificationThresholdDegrees = 90.0,
+        ).coerced()
+
+        assertTrue(noTopo.detectionRadiusMeters in SkySettings.RADIUS_RANGE)
+        assertTrue(noTopo.minElevationDegrees in SkySettings.MIN_ELEVATION_RANGE)
+        assertTrue(noTopo.minAltitudeMeters in SkySettings.MIN_ALTITUDE_RANGE)
+        assertTrue(noTopo.refreshIntervalMinutes in SkySettings.REFRESH_INTERVAL_RANGE)
+    }
+
+    @Test
+    fun `os valores de origem ja assentam todos na grelha`() {
+        // Se um valor de fábrica caísse entre pontos, ele seria corrigido na primeira leitura e a app
+        // arrancaria com um valor diferente do que declara — e a etiqueta "de origem" nunca apareceria.
+        assertEquals(SkySettings(), SkySettings().coerced())
+    }
+
+    @Test
+    fun `aplicar a grelha duas vezes da o mesmo resultado`() {
+        // Idempotência: `coerced()` corre em **toda** leitura (AD-022), por isso um valor não pode
+        // derivar de leitura em leitura.
+        val umaVez = SkySettings(detectionRadiusMeters = 42_617.3, minElevationDegrees = 33.7).coerced()
+
+        assertEquals(umaVez, umaVez.coerced())
+    }
 }

@@ -46,6 +46,9 @@
     <string name="settings_notifications_permission_missing">As notificações estão bloqueadas nas definições do Android.</string>
     <string name="settings_background_location_missing">Falta a permissão de localização em segundo plano. Sem ela, o widget e os avisos não funcionam com a app fechada.</string>
     <string name="settings_open_system_settings">Abrir definições</string>
+    <!-- Descrições dos botões de ajuste fino, para leitores de ecrã. -->
+    <string name="settings_decrease">Diminuir %1$s</string>
+    <string name="settings_increase">Aumentar %1$s</string>
 
     <!-- Rationale das permissões: mostrado ANTES do diálogo do sistema. -->
     <string name="permission_location_rationale">Para saber que aviões estão sobre ti, a mySky precisa da tua localização. A posição é usada apenas no teu dispositivo, para calcular a distância e o ângulo até cada avião.</string>
