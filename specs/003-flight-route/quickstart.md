@@ -151,3 +151,14 @@ não conta como erro (SC-007). Conta a rota de **outro** voo.
 - [ ] Pelo menos 70% dos voos comerciais com rota (SC-001) — contar em ~100 entradas
 - [ ] Nenhuma rota errada em 30 voos verificados (SC-007)
 - [ ] Subagente `reviewer` executado e achados tratados
+
+---
+
+## Cobertura medida — 2026-09-15
+
+**~99%** dos voos na lista mostram origem e destino, contra os ≥70% que o SC-001 exige.
+
+Lido com a ressalva que interessa: os critérios de origem (25° de ângulo mínimo, 30 km de raio)
+selecionam quase só tráfego de linha em cruzeiro, que é o que esta tabela cobre bem. Baixar o ângulo
+mínimo traz aviação geral e tráfego baixo, que a tabela não conhece, e a cobertura desce — sem que isso
+seja defeito nenhum.

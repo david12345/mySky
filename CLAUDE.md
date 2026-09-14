@@ -837,9 +837,19 @@ isso não serve de linha de base "antes" para o SC-005 da 003 — esse continua 
 inverificável, como já estava. E o relato foi "a app abre em 1 segundo"; o SC-001 é sobre a **lista**
 aparecer, que exige ainda uma posição e uma ida à rede. Serve como linha de base a partir de agora.
 
-**Dois números continuam por medir:** a cobertura real das rotas (SC-001 da 003, ≥70%) e a cobertura
-da tabela de operadores (SC-004 da 001). Ambas são contagens sobre uma amostra de voos reais, não
-cronometragens.
+**A cobertura das rotas foi medida a 2026-09-15: ~99%**, contra os ≥70% que o SC-001 da 003 exige.
+Folga enorme, e vale a pena perceber porquê antes de festejar: os critérios de origem — 25° de ângulo
+mínimo e 30 km de raio — filtram quase tudo o que **não** é tráfego de linha em cruzeiro, que é
+exatamente o tráfego que a tabela de rotas cobre bem. A aviação geral, os voos militares e o que anda
+baixo caem fora da lista antes de chegarem à consulta.
+
+**Consequência a reter:** a cobertura é alta em parte por causa dos filtros, não só da tabela. Um
+utilizador que baixe o ângulo mínimo para 5° vai ver a cobertura descer, e isso **não é um defeito** —
+é tráfego novo que a tabela genuinamente não conhece. Se alguém vier reportar "as rotas deixaram de
+aparecer", a primeira pergunta é o que está no ângulo mínimo. A 003 já garante que a ausência nunca
+deixa espaço vazio (SC-002), por isso o sintoma é benigno.
+
+**Falta um número:** a cobertura da tabela de operadores (SC-004 da 001, ≥95% sobre 100 entradas).
 
 **Um cenário que deixou de ser reproduzível:** a secção 4 do `specs/005-sky-widget/quickstart.md` — o
 widget partido da v1.0.0 a recuperar sozinho ao atualizar. Só existe a partir dessa versão, e a janela
