@@ -785,6 +785,8 @@ apanhar a categoria de defeito mais provável que lhe resta.
 
 ## Releases
 
+**v1.1.1** (2026-09-14): correção das definições, a partir de queixas de utilizadores. `versionCode` 3.
+
 **v1.1.0** (2026-09-14): o widget e as notificações. `versionCode` 2. Fecha as quatro features do MVP.
 
 **v1.0.0** (2026-09-10): lista, detalhe, rotas e definições.
