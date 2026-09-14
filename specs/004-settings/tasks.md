@@ -36,7 +36,7 @@ Módulo Gradle único `:app`, Clean Architecture em três camadas.
 
 **Purpose**: fixar a linha de base que falta há três features, e preparar os limites.
 
-- [ ] T001 Medir e registar na secção 0 de [quickstart.md](./quickstart.md) a **mediana do tempo até à primeira lista**, em cinco arranques a frio com a permissão concedida, **antes** de tocar em código. Não é requisito desta feature: é a dívida que deixou o SC-005 da 003 inverificável, e esta feature acrescenta mais uma leitura de disco ao primeiro ciclo (AD-018). É a última oportunidade fácil de fixar um número que já falta a duas features
+- [X] T001 Medir e registar na secção 0 de [quickstart.md](./quickstart.md) a **mediana do tempo até à primeira lista**, em cinco arranques a frio com a permissão concedida, **antes** de tocar em código. Não é requisito desta feature: é a dívida que deixou o SC-005 da 003 inverificável, e esta feature acrescenta mais uma leitura de disco ao primeiro ciclo (AD-018). É a última oportunidade fácil de fixar um número que já falta a duas features
 - [X] T002 [P] Acrescentar a `app/src/main/res/values/strings.xml` as strings desta feature: rótulo e explicação de cada definição, unidades, ação de repor, e a frase do alcance útil com o valor interpolado
 - [X] T003 [P] Acrescentar a `app/src/test/java/com/mysky/app/TestFixtures.kt` um construtor `skySettings(...)` com os valores de origem por omissão, para os testes declararem só o que desviam
 

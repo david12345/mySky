@@ -831,9 +831,15 @@ Corrigiram-se-lhe três defeitos críticos que os testes tinham deixado passar, 
 concorrentes a devolverem a rota de outro voo. O guião está em
 `specs/003-flight-route/quickstart.md`, secções 6 a 9.
 
-**Três números nunca medidos:** mediana do arranque, cobertura real das rotas (SC-001 da 003, ≥70%) e
-cobertura da tabela de operadores (SC-004 da 001). A mediana foi pedida como primeira tarefa da 004 e
-não foi feita — continua a ser a última oportunidade fácil antes de a app crescer mais.
+**O arranque foi medido a 2026-09-15: cerca de 1 segundo.** Muito abaixo dos 5 segundos que o SC-001
+da 001 exige. Duas ressalvas honestas: foi medido **depois** das features 004 a 006 e não antes, por
+isso não serve de linha de base "antes" para o SC-005 da 003 — esse continua estruturalmente
+inverificável, como já estava. E o relato foi "a app abre em 1 segundo"; o SC-001 é sobre a **lista**
+aparecer, que exige ainda uma posição e uma ida à rede. Serve como linha de base a partir de agora.
+
+**Dois números continuam por medir:** a cobertura real das rotas (SC-001 da 003, ≥70%) e a cobertura
+da tabela de operadores (SC-004 da 001). Ambas são contagens sobre uma amostra de voos reais, não
+cronometragens.
 
 **Um cenário que deixou de ser reproduzível:** a secção 4 do `specs/005-sky-widget/quickstart.md` — o
 widget partido da v1.0.0 a recuperar sozinho ao atualizar. Só existe a partir dessa versão, e a janela

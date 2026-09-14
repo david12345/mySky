@@ -19,7 +19,16 @@ concedida, e **registar a mediana aqui**:
 
 | Medição | Valor |
 |---|---|
-| Mediana do arranque, antes desta feature | _(por preencher)_ |
+| Arranque, medido a 2026-09-15 | **~1 segundo** |
+
+Medido já **depois** desta feature e das duas seguintes, não antes — a tarefa foi feita fora de ordem,
+e é preciso dizê-lo: este número não serve de linha de base "antes" para nada. Serve como linha de base
+**a partir de agora**, que é o melhor que ainda se consegue obter.
+
+Um segundo está muito abaixo dos 5 segundos que o SC-001 da 001 exige. **Nota sobre o que foi medido:**
+o relato foi "a app demora 1 segundo a abrir". O SC-001 é sobre a **lista** aparecer, que exige
+adicionalmente uma posição de GPS e uma ida à rede — se o segundo é até ao primeiro ecrã, a folga face
+aos 5 segundos é ainda maior do que parece, mas o número exato até à lista continua por apanhar.
 
 Não é requisito desta feature. É a dívida que ficou aberta em duas features anteriores — o SC-005 da
 003 ficou inverificável por falta deste número — e esta feature acrescenta uma leitura de disco ao
