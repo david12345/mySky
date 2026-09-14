@@ -783,9 +783,14 @@ apanhar a categoria de defeito mais provável que lhe resta.
 
 **Falta a validação em dispositivo** de ambas as features.
 
-## Primeira release
+## Releases
 
-**v1.0.0**, com APK assinado. A chave vive em `~/.mysky/mysky-release.jks`, fora do repositório, e as
+**v1.1.0** (2026-09-14): o widget e as notificações. `versionCode` 2. Fecha as quatro features do MVP.
+
+**v1.0.0** (2026-09-10): lista, detalhe, rotas e definições.
+
+Ambas com APK assinado pela mesma chave — `SHA-256` do certificado `d84b14bc…`, o que as torna
+atualizações umas das outras e não apps diferentes. A chave vive em `~/.mysky/mysky-release.jks`, fora do repositório, e as
 credenciais em `keystore.properties`, que o `.gitignore` exclui. **Perder essa chave significa nunca
 mais poder publicar uma atualização sob a mesma identidade.**
 
@@ -793,17 +798,25 @@ Página do produto em `docs/`, servida pelo GitHub Pages, com a atribuição que
 exige.
 
 **O que a app tem, ao todo:** lista dos aviões no céu com companhia e rota, detalhe de cada aeronave
-que se atualiza sozinho, tabela de rotas atualizável, e definições de deteção e unidades.
+que se atualiza sozinho, tabela de rotas atualizável, definições de deteção, unidades e cadência,
+widget de ecrã inicial, e notificações de passagem.
 
-**Continuam por implementar**, como esqueleto com `TODO(feature/...)`: widget (Glance),
-`SkyRefreshWorker`/`SkyWorkScheduler`, notificações, e o histórico de avistamentos em Room.
+**Continua por implementar:** o histórico de avistamentos em Room (`SightingRepository.recentSightings`
+é o último `TODO(feature/...)` que resta), e o mapa, que a AD-005 deixou de fora do MVP de propósito.
 
 ## Dívida conhecida, por ordem de importância
 
-**O APK de release nunca correu num aparelho.** É a lacuna mais séria. Os 278 testes, o lint e a
-inspeção do R8 dão boa evidência — o serializer dos DTO manteve o nome, Hilt e DataStore estão
-presentes — mas nada disso prova que a app arranca depois de minificada. Se falhar, o
-`app/build/outputs/mapping/release/mapping.txt` desofusca o relatório.
+**Nenhum APK de release correu num aparelho, nas duas versões.** É a lacuna mais séria, e cresceu com
+a v1.1.0: as duas features novas vivem quase todas em sítios que a JVM não alcança — WorkManager,
+Glance, permissões de segundo plano, notificações. Os 387 testes, o lint e a inspeção do R8 dão boa
+evidência de que o código está certo; nenhum deles prova que a app arranca depois de minificada nem
+que o widget desenha. Se falhar, o `app/build/outputs/mapping/release/mapping.txt` desofusca o
+relatório.
+
+**As duas revisões mais recentes provaram-no de forma incómoda:** dos quatro bloqueadores que
+encontraram, **dois estavam na fronteira do Compose** — um interruptor ligado ao campo errado e um
+`onNewIntent` em falta. Nos dois casos o domínio, o ViewModel e os testes estavam todos certos e a app
+estava errada. É a categoria de defeito que só um telefone apanha, e é agora a mais provável que resta.
 
 **A 003 também nunca foi validada em dispositivo**, e é a única das quatro em que isso aconteceu.
 Corrigiram-se-lhe três defeitos críticos que os testes tinham deixado passar, incluindo duas consultas
@@ -814,5 +827,11 @@ concorrentes a devolverem a rota de outro voo. O guião está em
 cobertura da tabela de operadores (SC-004 da 001). A mediana foi pedida como primeira tarefa da 004 e
 não foi feita — continua a ser a última oportunidade fácil antes de a app crescer mais.
 
-**Feature seguinte:** o widget (AD-003), que é a razão de ser da app e a maior das que faltam. Vai
-precisar do `SkyRefreshWorker` e do `SkyWorkScheduler`, ambos em esqueleto desde o início.
+**Feature seguinte:** nada de código, antes de a v1.1.0 correr num telefone. O MVP está fechado e a
+dívida que resta não é de implementação — é de verificação. Os guiões estão em
+`specs/005-sky-widget/quickstart.md` (secção 4: o widget partido da v1.0.0 a recuperar sozinho, que só
+é reproduzível a partir dessa versão) e `specs/006-overhead-notifications/quickstart.md` (secção 3: o
+widget num Android 10+ sem permissão de segundo plano; secções 5 e 6: notificação tocada com a app
+viva, e o interruptor depois de a permissão ser revogada).
+
+Depois disso, por ordem de valor: o histórico de avistamentos, ou o mapa.
