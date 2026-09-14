@@ -116,3 +116,10 @@ adb shell cmd jobscheduler run -f com.mysky.app <jobId>
 - [ ] Secção 7: 0 ou 1 trabalho periódico, sempre
 - [ ] Secção 8: cadência aplicada a quente, custo à vista
 - [ ] **Nunca** vista uma afirmação de presente sobre dados fora da janela (SC-003)
+
+---
+
+## Validado em dispositivo — 2026-09-15
+
+Reportado pelo utilizador como "está tudo ok", sobre a app publicada. As caixas acima ficam marcadas
+por esse relato e não por verificação minha, o que é a distinção honesta a fazer neste ficheiro.

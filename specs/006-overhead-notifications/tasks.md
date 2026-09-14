@@ -57,7 +57,7 @@ tem valor por si: entregue sozinha, corrige o widget que hoje não funciona em A
 
 - [X] T029 `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`
 - [X] T030 Invocar o `reviewer` e tratar os achados
-- [ ] T031 Validação manual de [quickstart.md](./quickstart.md) — **secção 3 é a que prova a correção da 005**
+- [X] T031 Validação manual de [quickstart.md](./quickstart.md) — **secção 3 é a que prova a correção da 005**
 - [X] T032 Atualizar o `CLAUDE.md`
 
 ## Dependências

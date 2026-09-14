@@ -75,3 +75,10 @@ adb shell dumpsys jobscheduler | grep -A3 com.mysky.app
 - [ ] Secção 5: um aviso por ciclo, um por passagem, e abre o detalhe certo
 - [ ] Secção 6: revogar pelas costas não deixa o ecrã a mentir
 - [ ] Secção 7: sem widget e sem notificações, zero trabalho agendado
+
+---
+
+## Validado em dispositivo — 2026-09-15
+
+Reportado pelo utilizador como "está tudo ok", sobre a app publicada. As caixas acima ficam marcadas
+por esse relato e não por verificação minha, o que é a distinção honesta a fazer neste ficheiro.

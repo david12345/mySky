@@ -808,17 +808,23 @@ widget de ecrã inicial, e notificações de passagem.
 
 ## Dívida conhecida, por ordem de importância
 
-**Nenhum APK de release correu num aparelho, nas duas versões.** É a lacuna mais séria, e cresceu com
-a v1.1.0: as duas features novas vivem quase todas em sítios que a JVM não alcança — WorkManager,
-Glance, permissões de segundo plano, notificações. Os 387 testes, o lint e a inspeção do R8 dão boa
-evidência de que o código está certo; nenhum deles prova que a app arranca depois de minificada nem
-que o widget desenha. Se falhar, o `app/build/outputs/mapping/release/mapping.txt` desofusca o
-relatório.
+**Validada em dispositivo a 2026-09-15** — reportado pelo utilizador como "está tudo ok", sobre a
+app já publicada. Fecha a lacuna que era, de longe, a mais séria deste projeto: até aqui **nenhum APK
+de release tinha corrido num telefone**, e as features 005 e 006 vivem quase todas onde a JVM não
+chega — WorkManager, Glance, permissões de segundo plano, notificações.
 
-**As duas revisões mais recentes provaram-no de forma incómoda:** dos quatro bloqueadores que
-encontraram, **dois estavam na fronteira do Compose** — um interruptor ligado ao campo errado e um
-`onNewIntent` em falta. Nos dois casos o domínio, o ViewModel e os testes estavam todos certos e a app
-estava errada. É a categoria de defeito que só um telefone apanha, e é agora a mais provável que resta.
+O que isto confirma, e vale a pena ficar escrito: o R8 não partiu nada (a app arranca minificada, com
+Hilt, Compose, DataStore, Room e WorkManager lá dentro), o widget desenha, e as duas correções que as
+revisões apanharam na fronteira do Compose — o interruptor ligado ao campo errado e o `onNewIntent` em
+falta — estão de facto resolvidas.
+
+**O que o relato não cobre**, e continua em aberto por ser de outra natureza: os três **números** por
+medir (ver abaixo). "Funciona" e "a mediana do arranque são X segundos" são perguntas diferentes.
+
+**A lição que fica registada:** dos quatro bloqueadores que as revisões da 005 e da 006 encontraram,
+**dois estavam na fronteira do Compose**, com o domínio, o ViewModel e os testes todos certos e a app
+errada. Os testes de JVM deste projeto continuam a não alcançar essa camada, e isso não mudou por a app
+ter sido validada uma vez — é a categoria de defeito a vigiar em cada feature nova.
 
 **A 003 também nunca foi validada em dispositivo**, e é a única das quatro em que isso aconteceu.
 Corrigiram-se-lhe três defeitos críticos que os testes tinham deixado passar, incluindo duas consultas
@@ -829,11 +835,11 @@ concorrentes a devolverem a rota de outro voo. O guião está em
 cobertura da tabela de operadores (SC-004 da 001). A mediana foi pedida como primeira tarefa da 004 e
 não foi feita — continua a ser a última oportunidade fácil antes de a app crescer mais.
 
-**Feature seguinte:** nada de código, antes de a v1.1.0 correr num telefone. O MVP está fechado e a
-dívida que resta não é de implementação — é de verificação. Os guiões estão em
-`specs/005-sky-widget/quickstart.md` (secção 4: o widget partido da v1.0.0 a recuperar sozinho, que só
-é reproduzível a partir dessa versão) e `specs/006-overhead-notifications/quickstart.md` (secção 3: o
-widget num Android 10+ sem permissão de segundo plano; secções 5 e 6: notificação tocada com a app
-viva, e o interruptor depois de a permissão ser revogada).
+**Um cenário que deixou de ser reproduzível:** a secção 4 do `specs/005-sky-widget/quickstart.md` — o
+widget partido da v1.0.0 a recuperar sozinho ao atualizar. Só existe a partir dessa versão, e a janela
+fechou-se. Se alguém tiver um aparelho ainda na v1.0.0, vale a pena aproveitá-lo antes de atualizar;
+caso contrário, fica coberto apenas pelo raciocínio da AD-026 e pelos testes do `reconcile()`.
 
-Depois disso, por ordem de valor: o histórico de avistamentos, ou o mapa.
+**Feature seguinte**, agora que o MVP está fechado e validado, por ordem de valor: o **histórico de
+avistamentos** (é o último `TODO(feature/...)` no código e a tabela do Room já existe) ou o **mapa**,
+que a AD-005 deixou de fora do MVP de propósito e que é a maior mudança estrutural que falta.

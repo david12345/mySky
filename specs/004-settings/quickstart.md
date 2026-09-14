@@ -126,3 +126,10 @@ servem para algo. Se ninguém acertar numa delas, a frase é que está errada �
 - [ ] Nenhum controlo ligado ao intervalo do trabalho periódico (FR-015)
 - [ ] Três pessoas ouvidas sobre as frases explicativas (SC-007)
 - [ ] Subagente `reviewer` executado e achados tratados
+
+---
+
+## Validado em dispositivo — 2026-09-15
+
+Reportado pelo utilizador como "está tudo ok", sobre a app publicada. As caixas acima ficam marcadas
+por esse relato e não por verificação minha, o que é a distinção honesta a fazer neste ficheiro.
