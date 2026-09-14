@@ -121,3 +121,16 @@ Validação em dispositivo feita a 2026-09-07.
 Os quatro por marcar não revelaram problema — não foram medidos. SC-001 e SC-004 são limiares
 numéricos: ficam por verificar até alguém os cronometrar e contar. Se a app vier a parecer lenta a
 arrancar, ou se faltarem nomes de companhia com frequência, é aqui que a dívida está.
+
+---
+
+## Números medidos — 2026-09-15
+
+| Critério | Exigido | Medido |
+|---|---|---|
+| SC-001 — arranque até à lista | < 5 s | ~1 s |
+| SC-004 — cobertura dos operadores | ≥ 95% | ~99% |
+
+A cobertura dos operadores e a das rotas (SC-001 da 003) deram o mesmo valor, o que sugere que o ~1%
+que falha é a mesma aeronave nos dois casos — tráfego sem indicativo comercial — e não duas lacunas
+independentes nas tabelas.

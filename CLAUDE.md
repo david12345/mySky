@@ -806,55 +806,54 @@ widget de ecrã inicial, e notificações de passagem.
 **Continua por implementar:** o histórico de avistamentos em Room (`SightingRepository.recentSightings`
 é o último `TODO(feature/...)` que resta), e o mapa, que a AD-005 deixou de fora do MVP de propósito.
 
-## Dívida conhecida, por ordem de importância
+## Estado da verificação
 
-**Validada em dispositivo a 2026-09-15** — reportado pelo utilizador como "está tudo ok", sobre a
-app já publicada. Fecha a lacuna que era, de longe, a mais séria deste projeto: até aqui **nenhum APK
-de release tinha corrido num telefone**, e as features 005 e 006 vivem quase todas onde a JVM não
-chega — WorkManager, Glance, permissões de segundo plano, notificações.
+**Validada em dispositivo a 2026-09-15**, reportado pelo utilizador. Fecha a lacuna que era, de longe,
+a mais séria: até aí **nenhum APK de release tinha corrido num telefone**, e as features 005 e 006
+vivem quase todas onde a JVM não chega. Confirma o que os testes não conseguiam — o R8 não partiu nada,
+o widget desenha, e as duas correções que as revisões apanharam na fronteira do Compose estão mesmo
+resolvidas.
 
-O que isto confirma, e vale a pena ficar escrito: o R8 não partiu nada (a app arranca minificada, com
-Hilt, Compose, DataStore, Room e WorkManager lá dentro), o widget desenha, e as duas correções que as
-revisões apanharam na fronteira do Compose — o interruptor ligado ao campo errado e o `onNewIntent` em
-falta — estão de facto resolvidas.
+**Os três números que faltavam foram todos medidos**, a 2026-09-15:
 
-**O que o relato não cobre**, e continua em aberto por ser de outra natureza: os três **números** por
-medir (ver abaixo). "Funciona" e "a mediana do arranque são X segundos" são perguntas diferentes.
+| Critério | Exigido | Medido |
+|---|---|---|
+| Arranque (SC-001 da 001) | < 5 s | **~1 s** |
+| Cobertura das rotas (SC-001 da 003) | ≥ 70% | **~99%** |
+| Cobertura dos operadores (SC-004 da 001) | ≥ 95% | **~99%** |
 
-**A lição que fica registada:** dos quatro bloqueadores que as revisões da 005 e da 006 encontraram,
-**dois estavam na fronteira do Compose**, com o domínio, o ViewModel e os testes todos certos e a app
-errada. Os testes de JVM deste projeto continuam a não alcançar essa camada, e isso não mudou por a app
-ter sido validada uma vez — é a categoria de defeito a vigiar em cada feature nova.
+**As duas coberturas darem o mesmo número não é coincidência, e a leitura importa.** Resolver o
+operador é só o prefixo de três letras do indicativo; casar uma rota exige o indicativo completo. Seria
+de esperar que os operadores ficassem acima. Ficarem iguais sugere que o ~1% que falha é **a mesma
+aeronave nos dois casos** — tráfego sem indicativo comercial, que falha as duas consultas ao mesmo
+tempo — e não duas lacunas independentes nas tabelas. É hipótese, não facto verificado, mas é a
+explicação que bate certo com os números.
 
-**A 003 também nunca foi validada em dispositivo**, e é a única das quatro em que isso aconteceu.
-Corrigiram-se-lhe três defeitos críticos que os testes tinham deixado passar, incluindo duas consultas
-concorrentes a devolverem a rota de outro voo. O guião está em
+**E as coberturas dependem dos filtros, não só das tabelas.** Com 25° de ângulo mínimo, a lista
+seleciona quase só tráfego de linha em cruzeiro, que é o que ambas as tabelas cobrem bem. Quem baixar o
+ângulo para 5° vai ver as duas descer, e **isso não é defeito** — é tráfego que as tabelas genuinamente
+não conhecem. Se aparecer um "as rotas deixaram de aparecer", a primeira pergunta é o ângulo mínimo.
+
+## Dívida conhecida
+
+**Cobertura não é correção, e a correção nunca foi verificada.** 99% dos voos mostram *uma* rota;
+ninguém confirmou que é a rota *certa*. O SC-007 da 003 pede 30 voos verificados contra uma fonte
+independente e continua por fazer. É a dívida mais relevante que resta, porque uma rota errada é
+precisamente o defeito que este projeto mais teme: não dá erro nenhum e parece certo.
+
+**Os passos adversariais da 003 nunca foram exercitados** — matar a app a meio de uma atualização da
+tabela, e confirmar que não há transferência nenhuma sem o utilizador a pedir. O uso normal da feature
+está validado (é o que produziu os 99%), mas esses dois cenários não. Guião em
 `specs/003-flight-route/quickstart.md`, secções 6 a 9.
 
-**O arranque foi medido a 2026-09-15: cerca de 1 segundo.** Muito abaixo dos 5 segundos que o SC-001
-da 001 exige. Duas ressalvas honestas: foi medido **depois** das features 004 a 006 e não antes, por
-isso não serve de linha de base "antes" para o SC-005 da 003 — esse continua estruturalmente
-inverificável, como já estava. E o relato foi "a app abre em 1 segundo"; o SC-001 é sobre a **lista**
-aparecer, que exige ainda uma posição e uma ida à rede. Serve como linha de base a partir de agora.
+**O SC-005 da 003 é permanentemente inverificável.** Pedia que a mediana do arranque não piorasse face
+ao valor de antes dessa feature, e esse valor nunca foi medido — a oportunidade perdeu-se a 2026-09-08.
+O ~1 s de hoje serve de linha de base a partir de agora, não retroativamente.
 
-**A cobertura das rotas foi medida a 2026-09-15: ~99%**, contra os ≥70% que o SC-001 da 003 exige.
-Folga enorme, e vale a pena perceber porquê antes de festejar: os critérios de origem — 25° de ângulo
-mínimo e 30 km de raio — filtram quase tudo o que **não** é tráfego de linha em cruzeiro, que é
-exatamente o tráfego que a tabela de rotas cobre bem. A aviação geral, os voos militares e o que anda
-baixo caem fora da lista antes de chegarem à consulta.
-
-**Consequência a reter:** a cobertura é alta em parte por causa dos filtros, não só da tabela. Um
-utilizador que baixe o ângulo mínimo para 5° vai ver a cobertura descer, e isso **não é um defeito** —
-é tráfego novo que a tabela genuinamente não conhece. Se alguém vier reportar "as rotas deixaram de
-aparecer", a primeira pergunta é o que está no ângulo mínimo. A 003 já garante que a ausência nunca
-deixa espaço vazio (SC-002), por isso o sintoma é benigno.
-
-**Falta um número:** a cobertura da tabela de operadores (SC-004 da 001, ≥95% sobre 100 entradas).
-
-**Um cenário que deixou de ser reproduzível:** a secção 4 do `specs/005-sky-widget/quickstart.md` — o
-widget partido da v1.0.0 a recuperar sozinho ao atualizar. Só existe a partir dessa versão, e a janela
-fechou-se. Se alguém tiver um aparelho ainda na v1.0.0, vale a pena aproveitá-lo antes de atualizar;
-caso contrário, fica coberto apenas pelo raciocínio da AD-026 e pelos testes do `reconcile()`.
+**O ponto cego mantém-se, e não se fecha com validações.** Dos quatro bloqueadores que as revisões da
+005 e da 006 encontraram, **dois estavam na fronteira do Compose**, com o domínio, o ViewModel e os
+testes todos certos e a app errada. Uma validação em dispositivo confirma uma versão; não protege a
+seguinte. É a categoria a vigiar em cada feature nova, e a razão de o `reviewer` ser obrigatório.
 
 **Feature seguinte**, agora que o MVP está fechado e validado, por ordem de valor: o **histórico de
 avistamentos** (é o último `TODO(feature/...)` no código e a tabela do Room já existe) ou o **mapa**,
